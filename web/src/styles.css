@@ -1,0 +1,13 @@
+:root { --fg:#111; --bg:#fff; --accent:#0b5fff; --alt:#1a7f37; --bad:#b00020; }
+* { box-sizing: border-box; }
+body { margin:0; font: 20px/1.4 system-ui, sans-serif; color:var(--fg); background:var(--bg); }
+main { max-width: 640px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 2rem; margin: 8px 0; }
+h2 { font-size: 1.5rem; }
+/* Design rule: every tappable control is at least 56px tall. */
+button.big { display:block; width:100%; min-height:72px; margin:16px 0; font-size:1.5rem; font-weight:700;
+  color:#fff; background:var(--accent); border:0; border-radius:16px; }
+button.big.alt { background:var(--alt); }
+button.big:active { filter: brightness(0.85); }
+.status { font-size: 1rem; color: var(--alt); }
+.status.bad { color: var(--bad); font-weight: 700; }

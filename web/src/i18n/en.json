@@ -1,0 +1,11 @@
+{
+  "app.title": "House Hub",
+  "app.tagline": "Your tasks for today",
+  "who.question": "Who are you?",
+  "who.housekeeper": "Housekeeper",
+  "who.family": "Family",
+  "home.placeholder": "The app is being built. Nothing to do yet.",
+  "status.server.ok": "Connected to the house computer",
+  "status.server.down": "Cannot reach the house computer",
+  "action.continue": "Continue"
+}
