@@ -71,7 +71,7 @@ export function EndOfDayScreen({ go }: { go: (to: string) => void }) {
           </div>
         </div>
       ) : (
-        <PrimaryButton onClick={press} disabled={busy}>{t("end.allDone")}</PrimaryButton>
+        <PrimaryButton sticky onClick={press} disabled={busy}>{t("end.allDone")}</PrimaryButton>
       )}
     </>
   );

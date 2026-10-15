@@ -131,7 +131,7 @@ export function HomeScreen({ role }: { role: Role }) {
 
       {/* One dominant action per screen */}
       {role === "housekeeper" ? (
-        h.visit.open ? <LinkButton to="/end-of-day" primary>{t("home.beforeLeave")}</LinkButton> : <LinkButton to="/groceries" primary>{t("nav.groceries")}</LinkButton>
+        h.visit.open ? <LinkButton to="/end-of-day" primary sticky>{t("home.beforeLeave")}</LinkButton> : <LinkButton to="/groceries" primary>{t("nav.groceries")}</LinkButton>
       ) : (
         <LinkButton to="/tasks/new" primary={h.requests_waiting.length === 0}>{t("home.addTask")}</LinkButton>
       )}

@@ -6,9 +6,9 @@ import { plural } from "../i18n";
 import { weekdayName } from "../format";
 
 /** One dominant action per screen. */
-export function PrimaryButton(p: { children: ReactNode; onClick: () => void; disabled?: boolean; type?: "button" | "submit" }) {
+export function PrimaryButton(p: { children: ReactNode; onClick: () => void; disabled?: boolean; type?: "button" | "submit"; sticky?: boolean }) {
   return (
-    <button type={p.type ?? "button"} className="btn primary" onClick={p.onClick} disabled={p.disabled}>
+    <button type={p.type ?? "button"} className={`btn primary${p.sticky ? " sticky" : ""}`} onClick={p.onClick} disabled={p.disabled}>
       {p.children}
     </button>
   );
@@ -49,8 +49,8 @@ export function BackButton({ to, label }: { to: string; label: string }) {
   );
 }
 
-export function LinkButton({ to, children, primary }: { to: string; children: ReactNode; primary?: boolean }) {
-  return <a className={`btn ${primary ? "primary" : "secondary"}`} href={`#${to}`}>{children}</a>;
+export function LinkButton({ to, children, primary, sticky }: { to: string; children: ReactNode; primary?: boolean; sticky?: boolean }) {
+  return <a className={`btn ${primary ? "primary" : "secondary"}${sticky ? " sticky" : ""}`} href={`#${to}`}>{children}</a>;
 }
 
 /** "Carried over from Monday" (+ how many visits). */

@@ -48,6 +48,8 @@ p { margin: 4px 0; }
   padding: 8px 16px; border-radius: 14px; border: 2px solid var(--accent); background: #fff; color: var(--accent-dark);
   font-weight: 700; text-decoration: none; text-align: center; cursor: pointer; }
 .btn.primary { min-height: 72px; font-size: 1.4rem; background: var(--accent); color: #fff; border-color: var(--accent); }
+/* the one main button stays in reach above the tab bar, however long the list is */
+.btn.sticky { position: sticky; bottom: 88px; z-index: 4; box-shadow: 0 -6px 12px rgba(255,255,255,.95), 0 4px 10px rgba(0,0,0,.25); }
 .btn.primary.small { min-height: var(--tap); font-size: 1.1rem; }
 .btn.secondary { background: #fff; }
 .btn.choice { min-height: 64px; background: var(--panel); color: var(--fg); border-color: var(--line); }
@@ -84,7 +86,7 @@ p { margin: 4px 0; }
 .tag.status.submitted { background: var(--warn-bg); border-color: #b27a00; color: #5c3d00; }
 .tag.status.approved { background: #dbe7ff; border-color: var(--accent); color: #062a78; }
 .tag.status.done { background: var(--ok-bg); border-color: var(--ok); color: #0d4a20; }
-.note-btn { width: 84px; padding: 4px 6px; font-size: .95rem; flex: 0 0 84px; }
+.note-btn { width: 72px; padding: 4px 4px; font-size: .95rem; flex: 0 0 72px; }
 .note-text { margin: 0 4px; padding: 8px 12px; background: var(--panel); border-radius: 10px; font-size: 1rem; overflow-wrap: anywhere; }
 .note-edit { display: flex; flex-direction: column; gap: 8px; }
 
