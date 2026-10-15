@@ -64,3 +64,11 @@ test("a task added today while today's visit is still open appears today", () =>
   const r = placeInstance({ due_date: "2026-10-15", recurring: false, created_date: "2026-10-15" }, ctx());
   assert.equal(r.visit_date, "2026-10-15");
 });
+
+test("closed-visit carry-over marker is stable across repeated recomputes (idempotent)", () => {
+  const c = ctx({ closedDays: new Set(["2026-10-15"]) });
+  const first = placeInstance({ due_date: "2026-10-15", recurring: false, created_date: "2026-10-15", visit_date: "2026-10-15" }, c);
+  assert.equal(first.rolled_from, "2026-10-15");
+  const second = placeInstance({ due_date: "2026-10-15", recurring: false, created_date: "2026-10-15", ...first }, c);
+  assert.deepEqual(second, first);
+});

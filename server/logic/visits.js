@@ -99,7 +99,8 @@ export function placeInstance(inst, ctx) {
   }
 
   const visit = firstVisitOnOrAfter(raw, ctx);
-  const existedBefore = inst.created_date === undefined || inst.created_date < raw;
+  // Only call it "carried over" if it had been planned for / shown on that day.
+  const existedBefore = inst.created_date === undefined || inst.created_date < raw || inst.visit_date === raw || inst.rolled_from === raw;
   const rolled_from = carriedFrom ?? (visit !== raw && existedBefore ? raw : null);
   return { status: "pending", skip_reason: null, visit_date: visit, rolled_from };
 }
