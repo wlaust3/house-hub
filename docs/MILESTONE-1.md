@@ -35,7 +35,7 @@ A housekeeper who comes Monday, Thursday and Saturday can open House Hub on her 
 - [ ] **Roles:** first visit shows "Who are you?" with Housekeeper / Family; the choice is remembered on the device and can be changed from one clearly visible control. Family-only actions (edit schedule, approve requests, edit recurring task definitions) are hidden from the Housekeeper role. This is a convenience, not security; the LAN-trust assumption is stated in the README.
 - [ ] **Persistence & backup:** all data lives in one SQLite file (path set by `HOUSE_HUB_DB`); copying that file while the server is stopped is a complete backup, and restoring it restores everything.
 - [ ] **Tests:** automated tests cover recurrence computation, rollover, and out-day handling (hide and shift), including month-end and leap-day cases, and a day-override on a day with carried-over tasks. `npm test` passes.
-- [ ] **CI:** GitHub Actions runs install, build and test on every push and PR to `main`, and is green.
+- [ ] **CI:** the workflow in `docs/ci.yml.example` is moved to `.github/workflows/ci.yml` (needs a token with `workflow` scope). GitHub Actions runs install, build and test on every push and PR to `main`, and is green.
 - [ ] **Docs:** README and `docs/DATA-MODEL.md` match what was built.
 
 ## Acceptance criteria by scope item

@@ -121,8 +121,12 @@ house-hub/
       i18n/             # en.json + t() helper
   test/                 # node:test tests (npm test)
   docs/                 # MILESTONE-1.md, DATA-MODEL.md, HANDOFF.md
-  .github/workflows/ci.yml
+  docs/ci.yml.example   # GitHub Actions workflow, to be moved to .github/workflows/ci.yml (see note below)
 ```
+
+## CI
+
+The CI workflow (install, build, test) is checked in as [`docs/ci.yml.example`](docs/ci.yml.example) because the token used to create this repo lacked GitHub's `workflow` scope. To enable it: `mkdir -p .github/workflows && git mv docs/ci.yml.example .github/workflows/ci.yml` and push with an account/token that has workflow permission (or add the file in the GitHub web UI).
 
 ## Contributing / agents
 
