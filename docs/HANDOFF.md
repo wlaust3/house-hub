@@ -4,7 +4,9 @@ You are building **House Hub**, a LAN-only web app for a housekeeper (who is the
 
 ## Current state
 
-Scaffold only: Express + better-sqlite3 server with a migration that creates every table, `/api/health`, a Vite + React + TypeScript placeholder page with `en.json` and a `t()` helper, a smoke test, and an active CI workflow (`.github/workflows/ci.yml`: install, build, test). `npm install && npm start` works. No feature endpoints or screens exist yet.
+Milestone 1 is implemented (see the PR and `docs/MILESTONE-1.md` for the criterion-by-criterion status). Backend: Express + better-sqlite3 with pure logic under `server/logic/`, DB-facing sync under `server/services/`, routes under `server/routes/`. Frontend: Vite + React + TypeScript screens under `web/src/screens/`, all strings in `web/src/i18n/en.json`. CI is active (`.github/workflows/ci.yml`). `npm install && npm start` works; `npm test` runs ~80 tests (recurrence, visit placement, rollover/merge, out days, request transitions, API flows, i18n key checks, backup).
+
+**Still to do / open:** run `docs/MANUAL-TEST.md` on a real phone and tablet over Wi-Fi (headless Chrome with emulated touch was used so far); a contrast pass with a tool; device ingestion (`/api/device/tasks`) is still future work.
 
 ## In scope (Milestone 1)
 
@@ -19,7 +21,7 @@ Scaffold only: Express + better-sqlite3 server with a migration that creates eve
 
 ## Explicitly out of scope
 
-- Home automation / device ingestion. Do **not** build `POST /api/tasks` or API keys; keep the schema ready (`source`, `external_id`, `source_meta`) and the design documented.
+- Home automation / device ingestion. Do **not** build `POST /api/device/tasks` or API keys (`POST /api/tasks` is the family's task editor, not the device endpoint); keep the schema ready (`source`, `external_id`, `source_meta`) and the design documented.
 - Cloud hosting, tunnels, any internet exposure.
 - Accounts, passwords, sessions, OAuth. v1 is a "Who are you?" role picker (Housekeeper / Family) stored in `localStorage`, with the LAN-trust assumption documented. Do not present it as security.
 - Push notifications, email/SMS.
