@@ -4,7 +4,7 @@ You are building **House Hub**, a LAN-only web app for a housekeeper (who is the
 
 ## Current state
 
-Scaffold only: Express + better-sqlite3 server with a migration that creates every table, `/api/health`, a Vite + React + TypeScript placeholder page with `en.json` and a `t()` helper, a smoke test, and a CI workflow file waiting to be activated (`docs/ci.yml.example` -> `.github/workflows/ci.yml`; needs a token with `workflow` scope). Enabling CI is the first task. `npm install && npm start` works. No feature endpoints or screens exist yet.
+Scaffold only: Express + better-sqlite3 server with a migration that creates every table, `/api/health`, a Vite + React + TypeScript placeholder page with `en.json` and a `t()` helper, a smoke test, and an active CI workflow (`.github/workflows/ci.yml`: install, build, test). `npm install && npm start` works. No feature endpoints or screens exist yet.
 
 ## In scope (Milestone 1)
 
@@ -57,7 +57,7 @@ test/           recurrence.test.js, rollover.test.js, outdays.test.js, requests.
 
 ## Suggested build order
 
-0. **Enable CI:** move `docs/ci.yml.example` to `.github/workflows/ci.yml` (see README "CI").
+0. **CI is active** (`.github/workflows/ci.yml`). Keep it green.
 1. **Pure logic + tests:** `recurrence` (next due, occurrences between), `visits` (next visit day given schedule + overrides), `rollover`, `outdays` (hide/shift). Get these green first.
 2. **Tasks API:** CRUD for definitions, `ensureInstances`, list instances by visit date, check/uncheck.
 3. **Home screen** (role picker, Today + Coming up, tick rows, Carried over marker).
