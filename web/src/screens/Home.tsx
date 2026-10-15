@@ -4,7 +4,7 @@ import { t, plural } from "../i18n";
 import { useLoad, errorText } from "../hooks";
 import type { Home, Item } from "../types";
 import type { Role } from "../role";
-import { dayLabel, dayLong, weekdayName } from "../format";
+import { dayHeading, dayLabel, dayLong, weekdayName } from "../format";
 import { CheckRow, ErrorBanner, LinkButton, SecondaryButton, Section, carriedText, whenDone } from "../components/ui";
 
 const REASON_KEY = {
@@ -160,7 +160,7 @@ export function HomeScreen({ role }: { role: Role }) {
         {h.coming_up.length === 0 && <p className="empty">{t("home.nothingComing")}</p>}
         {h.coming_up.map((c) => (
           <div key={c.date} className="day-block">
-            <h3 className="day-heading">{dayLong(c.date)}</h3>
+            <h3 className="day-heading">{dayHeading(c.date, h.today)}</h3>
             {c.out ? outBanner(c.date, c.out.reason, c.out.note) : c.items.length === 0 ? <p className="empty">{t("home.nothingPlanned")}</p> : <ul className="check-list">{rows(c.items, false)}</ul>}
           </div>
         ))}

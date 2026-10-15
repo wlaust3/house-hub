@@ -33,12 +33,12 @@ p { margin: 4px 0; }
 /* ---------- top bar and bottom tabs ---------- */
 .top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
   gap: var(--gap); padding: 8px 16px; background: #fff; border-bottom: 2px solid var(--line); max-width: none; }
-.brand { font-weight: 800; font-size: 1.3rem; }
+.brand { font-weight: 800; font-size: 1.15rem; white-space: nowrap; }
 .who-btn { width: auto; min-width: var(--tap); padding: 0 16px; }
 .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; gap: 8px; padding: 8px;
   background: #fff; border-top: 2px solid var(--line); }
 .tabs a { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--tap); min-width: var(--tap);
-  font-size: 1rem; font-weight: 700; text-decoration: none; color: var(--fg); border-radius: 12px; border: 2px solid transparent; text-align: center; }
+  font-size: .95rem; font-weight: 700; text-decoration: none; color: var(--fg); border-radius: 12px; border: 2px solid transparent; text-align: center; padding: 0 2px; }
 .tabs a.on { background: var(--accent); color: #fff; }
 .badge { background: var(--bad); color: #fff; border-radius: 999px; padding: 0 8px; font-size: .9rem; min-width: 24px; text-align: center; }
 

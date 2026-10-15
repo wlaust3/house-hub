@@ -4,7 +4,7 @@ import { t } from "../i18n";
 import { useLoad, errorText } from "../hooks";
 import type { ScheduleInfo, OutDay } from "../types";
 import type { Role } from "../role";
-import { dayLabel, dayLong, weekdayFromIso } from "../format";
+import { dayHeading, dayLabel, weekdayFromIso } from "../format";
 import { BackButton, ErrorBanner, SecondaryButton, Section } from "../components/ui";
 
 const REASONS = [
@@ -90,7 +90,7 @@ export function ScheduleScreen({ role }: { role: Role }) {
       <Section title={t("schedule.upcoming")}>
         {s.visits.map((v) => (
           <div key={v.date} className="day-block">
-            <h3 className="day-heading">{dayLabel(v.date, s.today)} · {dayLong(v.date)}</h3>
+            <h3 className="day-heading">{dayHeading(v.date, s.today)}</h3>
             {v.out ? outRow(v.date, v.out) : asking === v.date ? (
               <div className="card">
                 <p className="card-title">{t("out.why", { day: dayLabel(v.date, s.today) })}</p>

@@ -46,3 +46,11 @@ export function addMonth(month: string, delta: number): string {
   const d = new Date(y, m - 1 + delta, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
+
+/** "Tomorrow · Friday, Oct 16" or just "Saturday, Oct 17". */
+export function dayHeading(date: string, today: string): string {
+  const diff = Math.round((local(date).getTime() - local(today).getTime()) / 86400000);
+  if (diff === 0) return `${t("date.today")} · ${dayLong(date)}`;
+  if (diff === 1) return `${t("date.tomorrow")} · ${dayLong(date)}`;
+  return dayLong(date);
+}
