@@ -24,6 +24,7 @@
   "home.nextVisit": "Next visit: {day}",
   "home.notVisitDay": "She does not come today.",
   "home.nothingToday": "Nothing on the list today.",
+  "home.progress": "{done} of {n} done",
   "home.finished": "Today's visit is finished.",
   "home.reopen": "Open today's visit again",
   "home.beforeLeave": "Before I leave",

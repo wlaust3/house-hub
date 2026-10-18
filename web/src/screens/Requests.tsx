@@ -5,7 +5,8 @@ import { useLoad, errorText } from "../hooks";
 import type { Request } from "../types";
 import type { Role } from "../role";
 import { stamp } from "../format";
-import { ErrorBanner, PrimaryButton, SecondaryButton, Section } from "../components/ui";
+import { ErrorBanner, PageHeader, PrimaryButton, SecondaryButton } from "../components/ui";
+import { Icon } from "../components/icons";
 
 const KIND_KEY = { buy: "request.kind.buy", approve: "request.kind.approve", other: "request.kind.other" } as const;
 const STATUS_KEY = { submitted: "request.status.submitted", approved: "request.status.approved", done: "request.status.done" } as const;
@@ -46,12 +47,12 @@ export function RequestsScreen({ role }: { role: Role }) {
 
   const card = (r: Request) => (
     <li key={r.id} className={`card request ${r.status}`}>
-      <p className="card-title">{r.title}</p>
-      <p className="row-sub">
-        <span className={`tag status ${r.status}`}>{t(STATUS_KEY[r.status])}</span> {t(KIND_KEY[r.kind])}
-      </p>
+      <div className="card-head">
+        <p className="card-title">{r.title}</p>
+        <span className={`tag status ${r.status}`}>{t(STATUS_KEY[r.status])}</span>
+      </div>
+      <p className="row-sub">{t(KIND_KEY[r.kind])} · {t("request.updated", { when: stamp(r.updated_at) })}</p>
       {r.details && <p>{r.details}</p>}
-      <p className="hint">{t("request.updated", { when: stamp(r.updated_at) })}</p>
       {role === "family" && r.status === "submitted" && (
         <div className="btn-row">
           <button type="button" className="btn primary small" onClick={() => void move(r, "approved")}>{t("request.approve")}</button>
@@ -64,42 +65,47 @@ export function RequestsScreen({ role }: { role: Role }) {
     </li>
   );
 
+  const lists = (
+    <div className="stack">
+      <h2>{plural("request.openTitle", open.length)}</h2>
+      {open.length === 0 ? <p className="card soft empty">{t("request.none")}</p> : <ul className="request-grid">{open.map(card)}</ul>}
+      {finished.length > 0 && (
+        <>
+          <SecondaryButton onClick={() => setShowFinished(!showFinished)} pressed={showFinished}>
+            {plural("request.finished", finished.length)} <Icon name={showFinished ? "up" : "down"} size={20} />
+          </SecondaryButton>
+          {showFinished && <ul className="request-grid">{finished.map(card)}</ul>}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <>
-      <h2>{t("request.title")}</h2>
+      <PageHeader title={t("request.title")} />
       <ErrorBanner message={problem ?? error} />
 
-      {role === "housekeeper" && (
-        <form className="add-form" onSubmit={create}>
-          <label className="field">
-            <span>{t("request.whatLabel")}</span>
-            <input type="text" value={title} maxLength={120} autoComplete="off" onChange={(e) => setTitle(e.target.value)} />
-          </label>
-          <div className="btn-row" role="group" aria-label={t("request.kindLabel")}>
-            {(Object.keys(KIND_KEY) as Request["kind"][]).map((k) => (
-              <button key={k} type="button" className={`btn toggle${kind === k ? " on" : ""}`} aria-pressed={kind === k} onClick={() => setKind(k)}>{t(KIND_KEY[k])}</button>
-            ))}
-          </div>
-          <label className="field">
-            <span>{t("request.detailsLabel")}</span>
-            <textarea rows={2} maxLength={500} value={details} onChange={(e) => setDetails(e.target.value)} />
-          </label>
-          <PrimaryButton type="submit" onClick={() => undefined}>{t("request.send")}</PrimaryButton>
-        </form>
-      )}
-
-      <Section title={plural("request.openTitle", open.length)}>
-        {open.length === 0 ? <p className="empty">{t("request.none")}</p> : <ul className="plain-list">{open.map(card)}</ul>}
-      </Section>
-
-      {finished.length > 0 && (
-        <section className="section">
-          <SecondaryButton onClick={() => setShowFinished(!showFinished)} pressed={showFinished}>
-            {plural("request.finished", finished.length)} {showFinished ? "▲" : "▼"}
-          </SecondaryButton>
-          {showFinished && <ul className="plain-list">{finished.map(card)}</ul>}
-        </section>
-      )}
+      {role === "housekeeper" ? (
+        <div className="cols split">
+          <form className="card add-form sticky-col" onSubmit={create}>
+            <label className="field">
+              <span>{t("request.whatLabel")}</span>
+              <input type="text" value={title} maxLength={120} autoComplete="off" onChange={(e) => setTitle(e.target.value)} />
+            </label>
+            <div className="segmented" role="group" aria-label={t("request.kindLabel")}>
+              {(Object.keys(KIND_KEY) as Request["kind"][]).map((k) => (
+                <button key={k} type="button" className={`btn${kind === k ? " on" : ""}`} aria-pressed={kind === k} onClick={() => setKind(k)}>{t(KIND_KEY[k])}</button>
+              ))}
+            </div>
+            <label className="field">
+              <span>{t("request.detailsLabel")}</span>
+              <textarea rows={2} maxLength={500} value={details} onChange={(e) => setDetails(e.target.value)} />
+            </label>
+            <PrimaryButton type="submit" onClick={() => undefined}>{t("request.send")}</PrimaryButton>
+          </form>
+          {lists}
+        </div>
+      ) : lists}
     </>
   );
 }

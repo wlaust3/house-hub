@@ -3,7 +3,7 @@ import { api } from "../api";
 import { t } from "../i18n";
 import { errorText } from "../hooks";
 import type { TaskDef, OneOff } from "../types";
-import { BackButton, ErrorBanner, PrimaryButton, SecondaryButton } from "../components/ui";
+import { BackButton, ErrorBanner, PageHeader, PrimaryButton, SecondaryButton } from "../components/ui";
 
 type Kind = "daily" | "weekly" | "monthly" | "every_six_months" | "custom";
 const KINDS: [Kind, Parameters<typeof t>[0]][] = [
@@ -86,11 +86,10 @@ export function TaskFormScreen({ id, presetDate, today, go }: { id: number | nul
   };
 
   return (
-    <>
-      <BackButton to="/tasks" label={t("nav.tasks")} />
-      <h2>{id === null ? t("tasks.newTitle") : t("tasks.editTitle")}</h2>
+    <div className="narrow stack">
+      <PageHeader back={<BackButton to="/tasks" label={t("nav.tasks")} />} title={id === null ? t("tasks.newTitle") : t("tasks.editTitle")} />
       <ErrorBanner message={problem} />
-      <form className="add-form" onSubmit={save}>
+      <form className="card add-form" onSubmit={save}>
         <label className="field">
           <span>{t("tasks.nameLabel")}</span>
           <input type="text" value={title} maxLength={200} autoComplete="off" onChange={(e) => setTitle(e.target.value)} />
@@ -101,17 +100,17 @@ export function TaskFormScreen({ id, presetDate, today, go }: { id: number | nul
         </label>
 
         {id === null && (
-          <div className="btn-row" role="group" aria-label={t("tasks.howOften")}>
-            <button type="button" className={`btn toggle${mode === "once" ? " on" : ""}`} aria-pressed={mode === "once"} onClick={() => setMode("once")}>{t("tasks.justOnce")}</button>
-            <button type="button" className={`btn toggle${mode === "repeat" ? " on" : ""}`} aria-pressed={mode === "repeat"} onClick={() => setMode("repeat")}>{t("tasks.repeats")}</button>
+          <div className="segmented" role="group" aria-label={t("tasks.howOften")}>
+            <button type="button" className={`btn${mode === "once" ? " on" : ""}`} aria-pressed={mode === "once"} onClick={() => setMode("once")}>{t("tasks.justOnce")}</button>
+            <button type="button" className={`btn${mode === "repeat" ? " on" : ""}`} aria-pressed={mode === "repeat"} onClick={() => setMode("repeat")}>{t("tasks.repeats")}</button>
           </div>
         )}
 
         {mode === "once" && (
           <>
-            <div className="btn-row" role="group" aria-label={t("tasks.when")}>
-              <button type="button" className={`btn toggle${!pick ? " on" : ""}`} aria-pressed={!pick} onClick={() => setPick(false)}>{t("tasks.nextVisit")}</button>
-              <button type="button" className={`btn toggle${pick ? " on" : ""}`} aria-pressed={pick} onClick={() => setPick(true)}>{t("tasks.pickDay")}</button>
+            <div className="segmented" role="group" aria-label={t("tasks.when")}>
+              <button type="button" className={`btn${!pick ? " on" : ""}`} aria-pressed={!pick} onClick={() => setPick(false)}>{t("tasks.nextVisit")}</button>
+              <button type="button" className={`btn${pick ? " on" : ""}`} aria-pressed={pick} onClick={() => setPick(true)}>{t("tasks.pickDay")}</button>
             </div>
             {pick && (
               <label className="field">
@@ -156,19 +155,23 @@ export function TaskFormScreen({ id, presetDate, today, go }: { id: number | nul
         <PrimaryButton type="submit" onClick={() => undefined} disabled={busy}>{t("action.save")}</PrimaryButton>
       </form>
 
-      {id !== null && isRecurring && (
-        <SecondaryButton onClick={() => void setPaused(!active)}>{active ? t("tasks.pause") : t("tasks.resume")}</SecondaryButton>
+      {id !== null && (
+        <section className="card">
+          {isRecurring && (
+            <SecondaryButton onClick={() => void setPaused(!active)}>{active ? t("tasks.pause") : t("tasks.resume")}</SecondaryButton>
+          )}
+          {!confirmDelete && <SecondaryButton danger onClick={() => setConfirmDelete(true)}>{t("tasks.delete")}</SecondaryButton>}
+          {confirmDelete && (
+            <div className="card warn" role="alert">
+              <p className="card-title">{t("tasks.deleteConfirm")}</p>
+              <div className="btn-row">
+                <SecondaryButton danger onClick={() => void remove()}>{t("tasks.deleteYes")}</SecondaryButton>
+                <SecondaryButton onClick={() => setConfirmDelete(false)}>{t("tasks.deleteNo")}</SecondaryButton>
+              </div>
+            </div>
+          )}
+        </section>
       )}
-      {id !== null && !confirmDelete && <SecondaryButton danger onClick={() => setConfirmDelete(true)}>{t("tasks.delete")}</SecondaryButton>}
-      {id !== null && confirmDelete && (
-        <div className="card warn" role="alert">
-          <p className="card-title">{t("tasks.deleteConfirm")}</p>
-          <div className="stack">
-            <SecondaryButton danger onClick={() => void remove()}>{t("tasks.deleteYes")}</SecondaryButton>
-            <SecondaryButton onClick={() => setConfirmDelete(false)}>{t("tasks.deleteNo")}</SecondaryButton>
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 }

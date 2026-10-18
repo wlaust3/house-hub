@@ -3,7 +3,8 @@ import { t } from "../i18n";
 import { useLoad } from "../hooks";
 import type { TaskDef, OneOff, Repeat } from "../types";
 import { dayLong, weekdayName } from "../format";
-import { BackButton, ErrorBanner, LinkButton, Section } from "../components/ui";
+import { BackButton, ErrorBanner, LinkButton, PageHeader, Section } from "../components/ui";
+import { Icon } from "../components/icons";
 
 export function repeatText(r: Repeat): string {
   switch (r.kind) {
@@ -20,39 +21,49 @@ export function TasksScreen() {
   if (!data) return <p className="hint">{error ?? t("common.loading")}</p>;
   return (
     <>
-      <BackButton to="/more" label={t("nav.more")} />
-      <h2>{t("tasks.title")}</h2>
+      <PageHeader back={<BackButton to="/more" label={t("nav.more")} phoneOnly />} title={t("tasks.title")}
+        actions={<LinkButton to="/tasks/new" primary icon="plus">{t("home.addTask")}</LinkButton>} />
       <ErrorBanner message={error} />
-      <LinkButton to="/tasks/new" primary>{t("home.addTask")}</LinkButton>
 
-      <Section title={t("tasks.repeating")}>
-        {data.recurring.length === 0 && <p className="empty">{t("tasks.noneRepeating")}</p>}
-        <ul className="plain-list">
-          {data.recurring.map((r) => (
-            <li key={r.id}>
-              <a className="card link" href={`#/tasks/${r.id}`}>
-                <span className="card-title">{r.title}</span>
-                <span className="row-sub">{repeatText(r.repeat)}{!r.active && <> · <span className="tag">{t("tasks.paused")}</span></>}</span>
-                {r.next_due && <span className="row-sub">{t("tasks.next", { day: dayLong(r.next_due) })}</span>}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </Section>
+      <div className="cols even">
+        <Section title={t("tasks.repeating")} icon="history">
+          {data.recurring.length === 0 && <p className="empty">{t("tasks.noneRepeating")}</p>}
+          <ul className="check-list link-list">
+            {data.recurring.map((r) => (
+              <li key={r.id}>
+                <a className="link-row" href={`#/tasks/${r.id}`}>
+                  <span className="grow">
+                    <span className="row-title">{r.title}</span>
+                    <span className="row-meta">
+                      <span className="row-sub">{repeatText(r.repeat)}</span>
+                      {!r.active && <span className="tag">{t("tasks.paused")}</span>}
+                      {r.next_due && r.active && <span className="row-sub">{t("tasks.next", { day: dayLong(r.next_due) })}</span>}
+                    </span>
+                  </span>
+                  <Icon name="right" size={20} />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Section>
 
-      <Section title={t("tasks.once")}>
-        {data.one_offs.length === 0 && <p className="empty">{t("tasks.noneOnce")}</p>}
-        <ul className="plain-list">
-          {data.one_offs.map((o) => (
-            <li key={o.id}>
-              <a className="card link" href={`#/tasks/${o.id}`}>
-                <span className="card-title">{o.title}</span>
-                <span className="row-sub">{t("tasks.willShow", { day: weekdayName(o.visit_date) })}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </Section>
+        <Section title={t("tasks.once")} icon="check">
+          {data.one_offs.length === 0 && <p className="empty">{t("tasks.noneOnce")}</p>}
+          <ul className="check-list link-list">
+            {data.one_offs.map((o) => (
+              <li key={o.id}>
+                <a className="link-row" href={`#/tasks/${o.id}`}>
+                  <span className="grow">
+                    <span className="row-title">{o.title}</span>
+                    <span className="row-sub">{t("tasks.willShow", { day: weekdayName(o.visit_date) })}</span>
+                  </span>
+                  <Icon name="right" size={20} />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      </div>
     </>
   );
 }

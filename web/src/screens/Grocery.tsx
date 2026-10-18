@@ -3,7 +3,8 @@ import { api } from "../api";
 import { t, plural } from "../i18n";
 import { useLoad, errorText } from "../hooks";
 import type { Grocery } from "../types";
-import { CheckRow, ErrorBanner, PrimaryButton, SecondaryButton } from "../components/ui";
+import { CheckRow, ErrorBanner, PageHeader, PrimaryButton, SecondaryButton } from "../components/ui";
+import { Icon } from "../components/icons";
 
 export function GroceryScreen() {
   // Shared list: re-read every 10 seconds so other devices' changes show up.
@@ -57,41 +58,44 @@ export function GroceryScreen() {
   };
 
   return (
-    <>
-      <h2>{t("grocery.title")}</h2>
+    <div className="narrow stack">
+      <PageHeader title={t("grocery.title")} />
       <ErrorBanner message={problem ?? error} />
-      <form className="add-form" onSubmit={add}>
-        <label className="field">
-          <span>{t("grocery.nameLabel")}</span>
-          <input ref={input} type="text" enterKeyHint="done" autoComplete="off" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label className="field">
-          <span>{t("grocery.qtyLabel")}</span>
-          <input type="text" autoComplete="off" value={qty} maxLength={40} onChange={(e) => setQty(e.target.value)} />
-        </label>
-        <PrimaryButton type="submit" onClick={() => undefined}>{t("grocery.add")}</PrimaryButton>
+      <form className="card add-form" onSubmit={add}>
+        <div className="field-row">
+          <label className="field">
+            <span>{t("grocery.nameLabel")}</span>
+            <input ref={input} type="text" enterKeyHint="done" autoComplete="off" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
+          </label>
+          <label className="field qty">
+            <span>{t("grocery.qtyLabel")}</span>
+            <input type="text" autoComplete="off" value={qty} maxLength={40} onChange={(e) => setQty(e.target.value)} />
+          </label>
+          <PrimaryButton type="submit" onClick={() => undefined}><Icon name="plus" size={22} />{t("grocery.add")}</PrimaryButton>
+        </div>
       </form>
 
-      {data.length === 0 ? <p className="empty">{t("grocery.empty")}</p> : (
-        <ul className="check-list">
-          {data.map((g) => (
-            <CheckRow key={g.id} checked={!!g.bought_at} title={g.name} sub={g.quantity || undefined} onToggle={() => void toggle(g)} />
-          ))}
-        </ul>
-      )}
-
-      {bought.length > 0 && !confirmClear && (
-        <SecondaryButton onClick={() => setConfirmClear(true)}>{t("grocery.clear")}</SecondaryButton>
-      )}
-      {confirmClear && (
-        <div className="card warn" role="alert">
-          <p className="card-title">{plural("grocery.clearConfirm", bought.length)}</p>
-          <div className="stack">
-            <SecondaryButton danger onClick={() => void clear()}>{t("grocery.clearYes")}</SecondaryButton>
-            <SecondaryButton onClick={() => setConfirmClear(false)}>{t("grocery.clearNo")}</SecondaryButton>
+      <section className="card">
+        {data.length === 0 ? <p className="empty">{t("grocery.empty")}</p> : (
+          <ul className="check-list">
+            {data.map((g) => (
+              <CheckRow key={g.id} checked={!!g.bought_at} title={g.name} sub={g.quantity || undefined} onToggle={() => void toggle(g)} />
+            ))}
+          </ul>
+        )}
+        {bought.length > 0 && !confirmClear && (
+          <SecondaryButton onClick={() => setConfirmClear(true)}>{t("grocery.clear")}</SecondaryButton>
+        )}
+        {confirmClear && (
+          <div className="card warn" role="alert">
+            <p className="card-title">{plural("grocery.clearConfirm", bought.length)}</p>
+            <div className="btn-row">
+              <SecondaryButton danger onClick={() => void clear()}>{t("grocery.clearYes")}</SecondaryButton>
+              <SecondaryButton onClick={() => setConfirmClear(false)}>{t("grocery.clearNo")}</SecondaryButton>
+            </div>
           </div>
-        </div>
-      )}
-    </>
+        )}
+      </section>
+    </div>
   );
 }

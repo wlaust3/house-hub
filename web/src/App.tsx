@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
-import { t, plural } from "./i18n";
+import { t, plural, Key } from "./i18n";
 import { getRole, setRole as saveRole, Role } from "./role";
 import { useHashRoute } from "./hooks";
 import { HomeScreen } from "./screens/Home";
@@ -12,7 +12,8 @@ import { TasksScreen } from "./screens/Tasks";
 import { TaskFormScreen } from "./screens/TaskForm";
 import { CalendarScreen } from "./screens/Calendar";
 import { HistoryScreen } from "./screens/History";
-import { LinkButton } from "./components/ui";
+import { PageHeader } from "./components/ui";
+import { Icon, IconName } from "./components/icons";
 
 function browserToday(): string {
   const d = new Date();
@@ -23,26 +24,52 @@ function browserToday(): string {
 function WhoAreYou({ onPick, current }: { onPick: (r: Role) => void; current: Role | null }) {
   return (
     <main className="who">
-      <h1>{t("app.title")}</h1>
-      <h2>{t("who.question")}</h2>
-      <button type="button" className="btn primary" onClick={() => onPick("housekeeper")}>{t("who.housekeeper")}</button>
-      <button type="button" className="btn choice" onClick={() => onPick("family")}>{t("who.family")}</button>
-      {current && <a className="btn secondary" href="#/">{t("action.cancel")}</a>}
-      <p className="hint">{t("who.hint")}</p>
+      <div className="who-card">
+        <span className="brand-mark big" aria-hidden="true"><Icon name="home" size={32} /></span>
+        <p className="who-app">{t("app.title")}</p>
+        <h1>{t("who.question")}</h1>
+        <div className="who-tiles">
+          <button type="button" className={`who-tile${current === "housekeeper" ? " on" : ""}`} onClick={() => onPick("housekeeper")}>
+            <Icon name="user" size={36} />{t("who.housekeeper")}
+          </button>
+          <button type="button" className={`who-tile${current === "family" ? " on" : ""}`} onClick={() => onPick("family")}>
+            <Icon name="users" size={36} />{t("who.family")}
+          </button>
+        </div>
+        {current && <a className="btn secondary" href="#/">{t("action.cancel")}</a>}
+        <p className="hint">{t("who.hint")}</p>
+      </div>
     </main>
   );
 }
 
+type NavItem = { to: string; key: Key; icon: IconName; id: string; familyOnly?: boolean };
+// Sidebar (tablet) shows everything; the phone tab bar shows the first three plus "More".
+const NAV: NavItem[] = [
+  { id: "home", to: "/", key: "nav.home", icon: "home" },
+  { id: "groceries", to: "/groceries", key: "nav.groceries", icon: "cart" },
+  { id: "requests", to: "/requests", key: "nav.requests", icon: "inbox" },
+  { id: "calendar", to: "/calendar", key: "home.calendar", icon: "calendar" },
+  { id: "schedule", to: "/schedule", key: "nav.schedule", icon: "clock" },
+  { id: "tasks", to: "/tasks", key: "nav.tasks", icon: "list", familyOnly: true },
+  { id: "history", to: "/history", key: "nav.history", icon: "history", familyOnly: true },
+];
+
 function More({ role }: { role: Role }) {
   return (
     <>
-      <h2>{t("nav.more")}</h2>
-      <div className="stack">
-        {role === "family" && <LinkButton to="/tasks">{t("nav.tasks")}</LinkButton>}
-        <LinkButton to="/schedule">{t("nav.schedule")}</LinkButton>
-        <LinkButton to="/calendar">{t("home.calendar")}</LinkButton>
-        {role === "family" && <LinkButton to="/history">{t("nav.history")}</LinkButton>}
-      </div>
+      <PageHeader title={t("nav.more")} />
+      <ul className="card list-card">
+        {NAV.slice(3).filter((n) => role === "family" || !n.familyOnly).map((n) => (
+          <li key={n.id}>
+            <a className="link-row" href={`#${n.to}`}>
+              <span className="link-icon"><Icon name={n.icon} /></span>
+              <span className="grow row-title">{t(n.key)}</span>
+              <Icon name="right" size={20} />
+            </a>
+          </li>
+        ))}
+      </ul>
     </>
   );
 }
@@ -69,8 +96,11 @@ export function App() {
 
   const [path, query = ""] = route.split("?");
   const params = new URLSearchParams(query);
-  const tab = path.startsWith("/groceries") ? "groceries" : path.startsWith("/requests") ? "requests"
-    : ["/more", "/schedule", "/tasks", "/history"].some((p) => path.startsWith(p)) ? "more" : "home";
+  const active = NAV.slice(1).find((n) => path.startsWith(n.to))?.id ?? (path === "/end-of-day" ? "home" : path === "/more" ? "more" : "home");
+  const tab = ["home", "groceries", "requests"].includes(active) ? active : "more";
+  const badge = role === "family" && waiting > 0
+    ? <span className="badge" aria-label={plural("home.requestsWaiting", waiting)}>{waiting}</span> : null;
+  const roleName = role === "family" ? t("who.family") : t("who.housekeeper");
 
   let screen;
   if (path === "/groceries") screen = <GroceryScreen />;
@@ -86,23 +116,42 @@ export function App() {
   else screen = <HomeScreen role={role} />;
 
   return (
-    <>
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="brand"><span className="brand-mark" aria-hidden="true"><Icon name="home" size={22} /></span><span className="brand-name">{t("app.title")}</span></div>
+        <nav className="side-nav" aria-label={t("nav.label")}>
+          {NAV.filter((n) => role === "family" || !n.familyOnly).map((n) => (
+            <a key={n.id} href={`#${n.to}`} className={active === n.id ? "on" : ""} aria-current={active === n.id ? "page" : undefined}>
+              <Icon name={n.icon} /><span className="nav-text">{t(n.key)}</span>{n.id === "requests" && badge}
+            </a>
+          ))}
+        </nav>
+        <button type="button" className="role-btn" onClick={() => setChanging(true)} aria-label={t("who.change")}>
+          <span className="avatar"><Icon name={role === "family" ? "users" : "user"} size={20} /></span>
+          <span className="nav-text">{roleName}</span>
+          <Icon name="swap" size={18} />
+        </button>
+      </aside>
+
       <header className="top">
-        <span className="brand">{t("app.title")}</span>
-        <button type="button" className="btn secondary who-btn" onClick={() => setChanging(true)} aria-label={t("who.change")}>
-          {role === "family" ? t("who.family") : t("who.housekeeper")} <span aria-hidden="true">▾</span>
+        <span className="brand"><span className="brand-mark" aria-hidden="true"><Icon name="home" size={20} /></span><span className="brand-name">{t("app.title")}</span></span>
+        <button type="button" className="role-chip" onClick={() => setChanging(true)} aria-label={t("who.change")}>
+          <Icon name={role === "family" ? "users" : "user"} size={18} />{roleName}
         </button>
       </header>
-      <main>{screen}</main>
+
+      <main className="content">{screen}</main>
+
       <nav className="tabs" aria-label={t("nav.label")}>
-        <a href="#/" className={tab === "home" ? "on" : ""} aria-current={tab === "home" ? "page" : undefined}>{t("nav.home")}</a>
-        <a href="#/groceries" className={tab === "groceries" ? "on" : ""} aria-current={tab === "groceries" ? "page" : undefined}>{t("nav.groceries")}</a>
-        <a href="#/requests" className={tab === "requests" ? "on" : ""} aria-current={tab === "requests" ? "page" : undefined}>
-          {t("nav.requests")}
-          {role === "family" && waiting > 0 && <span className="badge" aria-label={plural("home.requestsWaiting", waiting)}>{waiting}</span>}
+        {NAV.slice(0, 3).map((n) => (
+          <a key={n.id} href={`#${n.to}`} className={tab === n.id ? "on" : ""} aria-current={tab === n.id ? "page" : undefined}>
+            <span className="tab-icon"><Icon name={n.icon} />{n.id === "requests" && badge}</span>{t(n.key)}
+          </a>
+        ))}
+        <a href="#/more" className={tab === "more" ? "on" : ""} aria-current={tab === "more" ? "page" : undefined}>
+          <span className="tab-icon"><Icon name="more" /></span>{t("nav.more")}
         </a>
-        <a href="#/more" className={tab === "more" ? "on" : ""} aria-current={tab === "more" ? "page" : undefined}>{t("nav.more")}</a>
       </nav>
-    </>
+    </div>
   );
 }
