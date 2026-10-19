@@ -5,7 +5,7 @@ import { useLoad, errorText } from "../hooks";
 import type { CalendarDay } from "../types";
 import type { Role } from "../role";
 import { addMonth, dayLong, monthTitle, weekdayFromIso } from "../format";
-import { BackButton, CheckRow, ErrorBanner, LinkButton, PageHeader, carriedText, whenDone } from "../components/ui";
+import { BackButton, CheckRow, ErrorBanner, LinkButton, PageHeader, carriedText, taskTags, whenDone } from "../components/ui";
 import { Icon } from "../components/icons";
 
 /** Optional month view. Never the default; reached only from the Calendar button on Home. */
@@ -75,7 +75,7 @@ export function CalendarScreen({ role }: { role: Role }) {
             {sel.items.length > 0 && (
               <ul className="check-list">
                 {sel.items.map((i) => (
-                  <CheckRow key={i.id} checked={i.status === "done"} title={i.title} carried={carriedText(i)} sub={whenDone(i)} note={i.note}
+                  <CheckRow key={i.id} checked={i.status === "done"} title={i.title} carried={carriedText(i)} priority={i.priority} tags={taskTags(i, true)} sub={whenDone(i)} note={i.note}
                     readOnly={!isToday || isPast} onToggle={isToday ? () => void toggle(i.id, i.status !== "done") : undefined} />
                 ))}
               </ul>

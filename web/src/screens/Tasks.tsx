@@ -3,7 +3,7 @@ import { t } from "../i18n";
 import { useLoad } from "../hooks";
 import type { TaskDef, OneOff, Repeat } from "../types";
 import { dayLong, weekdayName } from "../format";
-import { BackButton, ErrorBanner, LinkButton, PageHeader, Section } from "../components/ui";
+import { BackButton, ErrorBanner, LinkButton, PageHeader, PriorityTag, Section } from "../components/ui";
 import { Icon } from "../components/icons";
 
 export function repeatText(r: Repeat): string {
@@ -31,10 +31,12 @@ export function TasksScreen() {
           <ul className="check-list link-list">
             {data.recurring.map((r) => (
               <li key={r.id}>
-                <a className="link-row" href={`#/tasks/${r.id}`}>
+                <a className={`link-row prio-bar p${r.priority}`} href={`#/tasks/${r.id}`}>
                   <span className="grow">
                     <span className="row-title">{r.title}</span>
                     <span className="row-meta">
+                      <PriorityTag priority={r.priority} />
+                      {r.owner_name && <span className="tag owner"><Icon name="user" size={14} />{r.owner_name}</span>}
                       <span className="row-sub">{repeatText(r.repeat)}</span>
                       {!r.active && <span className="tag">{t("tasks.paused")}</span>}
                       {r.next_due && r.active && <span className="row-sub">{t("tasks.next", { day: dayLong(r.next_due) })}</span>}
@@ -52,10 +54,14 @@ export function TasksScreen() {
           <ul className="check-list link-list">
             {data.one_offs.map((o) => (
               <li key={o.id}>
-                <a className="link-row" href={`#/tasks/${o.id}`}>
+                <a className={`link-row prio-bar p${o.priority}`} href={`#/tasks/${o.id}`}>
                   <span className="grow">
                     <span className="row-title">{o.title}</span>
-                    <span className="row-sub">{t("tasks.willShow", { day: weekdayName(o.visit_date) })}</span>
+                    <span className="row-meta">
+                      <PriorityTag priority={o.priority} />
+                      {o.owner_name && <span className="tag owner"><Icon name="user" size={14} />{o.owner_name}</span>}
+                      <span className="row-sub">{t("tasks.willShow", { day: weekdayName(o.visit_date) })}</span>
+                    </span>
                   </span>
                   <Icon name="right" size={20} />
                 </a>

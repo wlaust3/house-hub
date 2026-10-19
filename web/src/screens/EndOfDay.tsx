@@ -4,7 +4,7 @@ import { t, plural } from "../i18n";
 import { errorText } from "../hooks";
 import type { Home } from "../types";
 import { dayLabel, dayLong } from "../format";
-import { BackButton, CheckRow, ErrorBanner, PageHeader, PrimaryButton, SecondaryButton, carriedText } from "../components/ui";
+import { BackButton, CheckRow, ErrorBanner, PageHeader, PrimaryButton, SecondaryButton, carriedText, taskTags } from "../components/ui";
 
 export function EndOfDayScreen({ go }: { go: (to: string) => void }) {
   const [home, setHome] = useState<Home | null>(null);
@@ -57,7 +57,7 @@ export function EndOfDayScreen({ go }: { go: (to: string) => void }) {
         {items.length === 0 ? <p className="empty">{t("home.nothingToday")}</p> : (
           <ul className="check-list">
             {items.map((i) => (
-              <CheckRow key={i.id} checked={checked.has(i.id)} title={i.title} carried={carriedText(i)} onToggle={() => toggle(i.id)} />
+              <CheckRow key={i.id} checked={checked.has(i.id)} title={i.title} carried={carriedText(i)} priority={i.priority} tags={taskTags(i, true)} onToggle={() => toggle(i.id)} />
             ))}
           </ul>
         )}

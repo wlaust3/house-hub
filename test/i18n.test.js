@@ -57,5 +57,5 @@ test("components contain no literal user-visible English text", () => {
 });
 
 test("every placeholder used in a message is a known variable name", () => {
-  for (const [k, v] of Object.entries(en)) for (const m of v.matchAll(/\{(\w+)\}/g)) assert.match(m[1], /^(n|day|reason|when|who|title|date|count|done)$/, `${k}: {${m[1]}}`);
+  for (const [k, v] of Object.entries(en)) for (const m of v.matchAll(/\{(\w+)\}/g)) assert.match(m[1], /^(n|day|reason|when|who|title|date|count|done|name)$/, `${k}: {${m[1]}}`);
 });

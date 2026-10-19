@@ -27,6 +27,20 @@ const ACTION_KEY: Record<string, Key> = {
   "day.out_undone": "history.day.outUndone",
   "day.out_changed": "history.day.outChanged",
   "schedule.changed": "history.schedule.changed",
+  "task.expired": "history.task.expired",
+  "lost.added": "history.lost.added",
+  "lost.found": "history.lost.found",
+  "lost.reopened": "history.lost.reopened",
+  "lost.removed": "history.lost.removed",
+  "day.extra": "history.day.extra",
+  "day.extra_removed": "history.day.extraRemoved",
+  "day.noted": "history.day.noted",
+  "day.note_removed": "history.day.noteRemoved",
+  "member.added": "history.member.added",
+  "member.edited": "history.member.edited",
+  "member.removed": "history.member.removed",
+  "grocery.repeating": "history.grocery.repeating",
+  "grocery.repeat_stopped": "history.grocery.repeatStopped",
 };
 
 function line(r: LogRow): string {
@@ -37,6 +51,7 @@ function line(r: LogRow): string {
   return t(key, {
     who,
     title: String(d.title ?? d.name ?? ""),
+    name: String(d.name ?? ""),
     date: typeof d.date === "string" ? dayLong(d.date) : "",
     count: Number(d.count ?? d.carried ?? 0),
     done: Number(d.done ?? 0),
@@ -52,8 +67,8 @@ export function HistoryScreen() {
       {!data ? <p className="hint">{t("common.loading")}</p> : data.length === 0 ? <p className="card soft empty">{t("history.empty")}</p> : (
         <ul className="card list-card history">
           {data.map((r) => (
-            <li key={r.id} className="history-row">
-              <span className="row-title">{line(r)}</span>
+            <li key={r.id} className={`history-row${r.test ? " test" : ""}`}>
+              <span className="row-title">{r.test && <span className="tag test-tag">{t("test.tag")}</span>} {line(r)}</span>
               <span className="row-sub">{stamp(r.at)}</span>
             </li>
           ))}
