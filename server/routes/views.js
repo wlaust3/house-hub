@@ -53,6 +53,8 @@ export function viewsRouter({ db, today, testFromId }) {
 
     const waiting = db.prepare("SELECT id, title, kind, created_at FROM requests WHERE status = 'submitted' ORDER BY created_at DESC").all();
     const approved = db.prepare("SELECT COUNT(*) FROM requests WHERE status = 'approved'").pluck().get();
+    const openRequests = db.prepare(`SELECT id, title, details, kind, status, priority, created_at FROM requests WHERE status != 'done'
+      ORDER BY priority, status = 'approved', created_at DESC`).all();
 
     res.json({
       today: t0,
@@ -64,6 +66,7 @@ export function viewsRouter({ db, today, testFromId }) {
       due_soon: dueSoon,
       requests_waiting: waiting,
       requests_approved: approved,
+      requests_open: openRequests,
       family_tasks: familyTasks,
       lost,
       grocery,

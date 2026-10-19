@@ -186,3 +186,21 @@ test("test mode works on a copy: the real data and history are untouched", async
     await new Promise((r) => server.close(r));
   }
 });
+
+test("requests: priority sorts open requests and anyone can change it", async () => {
+  const app = await boot();
+  try {
+    await app.post("/api/requests", { title: "Normal ask" }, H);
+    const low = await app.post("/api/requests", { title: "Low ask", priority: 3 }, H);
+    await app.post("/api/requests", { title: "Urgent ask", priority: 1 }, H);
+    assert.equal((await app.post("/api/requests", { title: "x", priority: 9 }, H)).status, 400);
+    let list = (await app.get("/api/requests")).body;
+    assert.deepEqual(list.map((r) => r.title), ["Urgent ask", "Normal ask", "Low ask"]);
+    assert.equal((await app.patch(`/api/requests/${low.body.id}`, { priority: 1 }, H)).status, 200);
+    list = (await app.get("/api/requests")).body;
+    assert.equal(list[1].title, "Low ask");
+    assert.deepEqual((await home(app, "family")).requests_open.map((r) => r.priority), [1, 1, 2]);
+    // moving a request forward is still family-only
+    assert.equal((await app.patch(`/api/requests/${low.body.id}`, { status: "approved" }, H)).status, 403);
+  } finally { await app.close(); }
+});

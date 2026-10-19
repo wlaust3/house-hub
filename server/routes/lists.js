@@ -88,11 +88,12 @@ export function groceryRouter({ db, now, today }) {
 
 export function requestsRouter({ db, now }) {
   const r = Router();
-  const SELECT = "SELECT id, title, details, kind, status, created_at, approved_at, done_at, COALESCE(done_at, approved_at, created_at) AS updated_at FROM requests";
+  const SELECT = "SELECT id, title, details, kind, status, priority, created_at, approved_at, done_at, COALESCE(done_at, approved_at, created_at) AS updated_at FROM requests";
 
   r.get("/", h((_req, res) => {
-    // Submitted first (newest first), then approved, then finished.
-    res.json(db.prepare(`${SELECT} ORDER BY CASE status WHEN 'submitted' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END, updated_at DESC, id DESC`).all());
+    // Open ones first (most important, then waiting before approved, newest first), then finished.
+    res.json(db.prepare(`${SELECT} ORDER BY status = 'done', CASE WHEN status != 'done' THEN priority END,
+      CASE status WHEN 'submitted' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END, updated_at DESC, id DESC`).all());
   }));
 
   r.post("/", h((req, res) => {
@@ -101,17 +102,27 @@ export function requestsRouter({ db, now }) {
     const details = cleanText(req.body?.details, { max: 500 });
     const kind = req.body?.kind ?? "other";
     if (!KINDS.includes(kind)) throw new HttpError(400, "Kind must be buy, approve or other.");
-    const id = db.prepare("INSERT INTO requests (title, details, kind, created_at) VALUES (?,?,?,?)").run(title, details, kind, now().toISOString()).lastInsertRowid;
+    const priority = Number(req.body?.priority ?? 2);
+    if (![1, 2, 3].includes(priority)) throw new HttpError(400, "Priority must be high, normal or low.");
+    const id = db.prepare("INSERT INTO requests (title, details, kind, priority, created_at) VALUES (?,?,?,?,?)").run(title, details, kind, priority, now().toISOString()).lastInsertRowid;
     log(db, who, "request.created", "request", id, { title, kind });
     res.status(201).json(db.prepare(`${SELECT} WHERE id = ?`).get(id));
   }));
 
-  // Moving a request forward is a family decision.
+  // Anyone can change the priority; moving a request forward is a family decision.
   r.patch("/:id", h((req, res) => {
-    const who = requireFamily(req);
     const id = parseId(req.params.id);
     const row = db.prepare("SELECT * FROM requests WHERE id = ?").get(id);
     if (!row) throw new HttpError(404, "That request was not found.");
+    if (req.body?.priority !== undefined && req.body?.status === undefined) {
+      const who = actor(req);
+      const priority = Number(req.body.priority);
+      if (![1, 2, 3].includes(priority)) throw new HttpError(400, "Priority must be high, normal or low.");
+      db.prepare("UPDATE requests SET priority = ? WHERE id = ?").run(priority, id);
+      log(db, who, "request.priority", "request", id, { title: row.title });
+      return res.json(db.prepare(`${SELECT} WHERE id = ?`).get(id));
+    }
+    const who = requireFamily(req);
     const to = req.body?.status;
     const err = transitionError(row.status, to);
     if (err) throw new HttpError(409, err);
