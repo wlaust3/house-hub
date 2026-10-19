@@ -63,20 +63,27 @@ function useOpen(key: string | undefined, fallback: boolean): [boolean, (v: bool
  * With `collapsible` (a storage key) the heading opens and closes it; `summary` is the
  * one-line stats shown next to the title so a closed section still says something useful.
  */
-export function Section({ title, children, hint, action, icon, className, collapsible, summary, defaultOpen = true }: {
+export type Tone = "tasks" | "today" | "next" | "family" | "grocery" | "request" | "schedule" | "lost" | "neutral";
+
+export function Section({ title, children, hint, action, icon, className, collapsible, summary, defaultOpen = true, tone, badge }: {
   title: string; children: ReactNode; hint?: string; action?: ReactNode; icon?: IconName; className?: string;
   collapsible?: string; summary?: ReactNode; defaultOpen?: boolean;
+  /** Colour family: which feature (or today / next visit) this card belongs to. */
+  tone?: Tone;
+  /** A coloured pill next to the title, e.g. TODAY or NEXT VISIT. */
+  badge?: ReactNode;
 }) {
   const [open, setOpen] = useOpen(collapsible, defaultOpen);
   const shown = !collapsible || open;
   const heading = (
     <>
-      <h2>{icon && <Icon name={icon} size={22} />}{title}</h2>
+      <h2>{icon && <Icon name={icon} size={20} />}{title}</h2>
+      {badge}
       {summary && <span className="summary">{summary}</span>}
     </>
   );
   return (
-    <section className={`card section${className ? ` ${className}` : ""}${shown ? "" : " closed"}`}>
+    <section className={`card section${className ? ` ${className}` : ""}${shown ? "" : " closed"}`} data-tone={tone}>
       <div className="card-head">
         {collapsible ? (
           <button type="button" className="head-btn" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -133,7 +140,7 @@ export function LinkButton({ to, children, primary, sticky, icon }: { to: string
 /** "Carried over from Monday" (+ how many visits). */
 export function carriedText(item: Pick<Item, "carried_from" | "carried_visits">): string | null {
   if (!item.carried_from) return null;
-  const base = t("task.carriedOver", { day: weekdayName(item.carried_from) });
+  const base = t("task.carriedOver", { day: weekdayName(item.carried_from, "short") });
   return item.carried_visits > 1 ? `${base} · ${plural("task.carriedVisits", item.carried_visits)}` : base;
 }
 

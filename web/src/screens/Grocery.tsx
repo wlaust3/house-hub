@@ -15,7 +15,7 @@ const REPEAT_CHOICES = [
 ] as const;
 
 /** The whole grocery list. Used on Home (inside a section) and on its own page. */
-export function GroceryPanel({ onChange }: { onChange?: () => void }) {
+export function GroceryPanel({ onChange, compact }: { onChange?: () => void; compact?: boolean }) {
   // Shared list: re-read every 10 seconds so other devices' changes show up.
   const { data, setData, error, reload } = useLoad(() => api<Grocery[]>("/grocery"), [], 10000);
   const { data: sugg, reload: reloadSugg } = useLoad(() => api<Suggestion[]>("/grocery/suggestions"), [], 0);
@@ -33,7 +33,7 @@ export function GroceryPanel({ onChange }: { onChange?: () => void }) {
   const onList = new Set(data.filter((g) => !g.bought_at).map((g) => g.name.toLowerCase()));
   const typed = name.trim().toLowerCase();
   // While typing: matching things bought before. Otherwise: the usual items not on the list yet.
-  const matches = (sugg ?? []).filter((s) => !onList.has(s.name.toLowerCase()) && (typed ? s.name.toLowerCase().startsWith(typed) && s.name.toLowerCase() !== typed : s.times > 1)).slice(0, typed ? 5 : 8);
+  const matches = (sugg ?? []).filter((s) => !onList.has(s.name.toLowerCase()) && (typed ? s.name.toLowerCase().startsWith(typed) && s.name.toLowerCase() !== typed : s.times > 1)).slice(0, typed ? 5 : compact ? 6 : 8);
 
   const changed = () => { onChange?.(); };
 
@@ -99,37 +99,56 @@ export function GroceryPanel({ onChange }: { onChange?: () => void }) {
   return (
     <div className="stack">
       <ErrorBanner message={problem ?? error} />
-      <form className="add-form" onSubmit={add}>
-        <div className="field-row">
-          <label className="field">
-            <span>{t("grocery.nameLabel")}</span>
-            <input ref={input} type="text" enterKeyHint="done" autoComplete="off" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <label className="field qty">
-            <span>{t("grocery.qtyLabel")}</span>
-            <input type="text" autoComplete="off" value={qty} maxLength={40} onChange={(e) => setQty(e.target.value)} />
-          </label>
-        </div>
-        {typed && matches.length > 0 && (
-          <div className="chips" aria-label={t("grocery.suggestions")}>
-            {matches.map((s) => (
-              <button key={s.name} type="button" className="chip" onClick={() => { setName(s.name); setQty(s.quantity ?? ""); input.current?.focus(); }}>{s.name}{s.quantity ? ` · ${s.quantity}` : ""}</button>
-            ))}
+      {compact ? (
+        <form className="quick-add" onSubmit={add}>
+          <input ref={input} type="text" enterKeyHint="done" autoComplete="off" value={name} maxLength={100} onChange={(e) => setName(e.target.value)}
+            aria-label={t("grocery.nameLabel")} placeholder={t("grocery.addPlaceholder")} />
+          <input className="qty" type="text" autoComplete="off" value={qty} maxLength={40} onChange={(e) => setQty(e.target.value)}
+            aria-label={t("grocery.qtyLabel")} placeholder={t("grocery.qtyShort")} />
+          <button type="button" className={`icon-btn${urgent ? " danger-on" : ""}`} aria-pressed={urgent} aria-label={t("grocery.outNow")} title={t("grocery.outNow")}
+            onClick={() => setUrgent(!urgent)}><Icon name="alert" size={20} /></button>
+          <button type="submit" className="btn primary" aria-label={t("grocery.add")}><Icon name="plus" size={22} /></button>
+        </form>
+      ) : (
+        <form className="add-form" onSubmit={add}>
+          <div className="field-row">
+            <label className="field">
+              <span>{t("grocery.nameLabel")}</span>
+              <input ref={input} type="text" enterKeyHint="done" autoComplete="off" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
+            </label>
+            <label className="field qty">
+              <span>{t("grocery.qtyLabel")}</span>
+              <input type="text" autoComplete="off" value={qty} maxLength={40} onChange={(e) => setQty(e.target.value)} />
+            </label>
           </div>
-        )}
-        <div className="field-row">
-          <button type="button" className={`btn toggle out-toggle${urgent ? " on" : ""}`} aria-pressed={urgent} onClick={() => setUrgent(!urgent)}>
-            <Icon name="alert" size={20} />{t("grocery.outNow")}
-          </button>
-          <label className="field">
-            <span className="sr-only">{t("grocery.repeatLabel")}</span>
-            <select value={every} onChange={(e) => setEvery(Number(e.target.value))} aria-label={t("grocery.repeatLabel")}>
-              {REPEAT_CHOICES.map(([d, key]) => <option key={d} value={d}>{t(key)}</option>)}
-            </select>
-          </label>
-          <PrimaryButton type="submit" onClick={() => undefined}><Icon name="plus" size={22} />{t("grocery.add")}</PrimaryButton>
+          {typed && matches.length > 0 && (
+            <div className="chips" aria-label={t("grocery.suggestions")}>
+              {matches.map((s) => (
+                <button key={s.name} type="button" className="chip" onClick={() => { setName(s.name); setQty(s.quantity ?? ""); input.current?.focus(); }}>{s.name}{s.quantity ? ` · ${s.quantity}` : ""}</button>
+              ))}
+            </div>
+          )}
+          <div className="field-row">
+            <button type="button" className={`btn toggle out-toggle${urgent ? " on" : ""}`} aria-pressed={urgent} onClick={() => setUrgent(!urgent)}>
+              <Icon name="alert" size={20} />{t("grocery.outNow")}
+            </button>
+            <label className="field">
+              <span className="sr-only">{t("grocery.repeatLabel")}</span>
+              <select value={every} onChange={(e) => setEvery(Number(e.target.value))} aria-label={t("grocery.repeatLabel")}>
+                {REPEAT_CHOICES.map(([d, key]) => <option key={d} value={d}>{t(key)}</option>)}
+              </select>
+            </label>
+            <PrimaryButton type="submit" onClick={() => undefined}><Icon name="plus" size={22} />{t("grocery.add")}</PrimaryButton>
+          </div>
+        </form>
+      )}
+      {compact && typed && matches.length > 0 && (
+        <div className="chips" aria-label={t("grocery.suggestions")}>
+          {matches.map((s) => (
+            <button key={s.name} type="button" className="chip" onClick={() => { setName(s.name); setQty(s.quantity ?? ""); input.current?.focus(); }}>{s.name}{s.quantity ? ` · ${s.quantity}` : ""}</button>
+          ))}
         </div>
-      </form>
+      )}
 
       {!typed && matches.length > 0 && (
         <div className="stack tight">
@@ -171,7 +190,9 @@ export function GroceryPanel({ onChange }: { onChange?: () => void }) {
         </div>
       )}
 
-      {staples && staples.length > 0 && (
+      {compact && <a className="more-link" href="#/groceries">{t("grocery.allOptions")}<Icon name="right" size={18} /></a>}
+
+      {!compact && staples && staples.length > 0 && (
         <div className="stack tight">
           <p className="mini-head">{t("grocery.repeating")}</p>
           <ul className="plain-list mini-list">
