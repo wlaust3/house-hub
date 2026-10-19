@@ -9,6 +9,7 @@ import { visitsRouter } from "./routes/visits.js";
 import { scheduleRouter } from "./routes/schedule.js";
 import { groceryRouter, requestsRouter } from "./routes/lists.js";
 import { viewsRouter } from "./routes/views.js";
+import { householdRouter } from "./routes/household.js";
 import { HttpError } from "./services/context.js";
 import { sync } from "./services/sync.js";
 
@@ -22,7 +23,7 @@ const distDir = path.join(here, "..", "dist");
 export function createApp(db, opts = {}) {
   const now = opts.now ?? (() => new Date());
   const today = () => localDate(now());
-  const deps = { db, now, today };
+  const deps = { db, now, today, testFromId: opts.testFromId ?? null };
 
   const app = express();
   app.use(express.json({ limit: "100kb" }));
@@ -36,7 +37,7 @@ export function createApp(db, opts = {}) {
   // Roll tasks forward and create upcoming recurring occurrences before anything is read.
   app.use("/api", (req, _res, next) => {
     try {
-      sync(db, today());
+      sync(db, today(), undefined, now().toISOString());
       next();
     } catch (e) {
       next(e);
@@ -50,6 +51,7 @@ export function createApp(db, opts = {}) {
   app.use("/api/requests", requestsRouter(deps));
   app.use("/api", scheduleRouter(deps));
   app.use("/api", viewsRouter(deps));
+  app.use("/api", householdRouter(deps));
 
   // Future (not in v1): POST /api/tasks for device ingestion, protected by an API key.
   // See docs/DATA-MODEL.md "Future: device ingestion".

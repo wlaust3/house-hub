@@ -4,7 +4,8 @@
 //   { today: 'YYYY-MM-DD',
 //     weekdays: number[] | Set<number>,   // regular visit weekdays, ISO 1..7
 //     outDays: Map<date, 'hide'|'shift'>, // regular visits that will NOT happen
-//     closedDays: Set<date> }             // visits already finished ("All done" pressed)
+//     closedDays: Set<date>,              // visits already finished ("All done" pressed)
+//     extraDays?: Set<date> }             // one-off extra visit days on top of the weekly schedule
 import { addDays, isoWeekday, maxDate, diffDays } from "./dates.js";
 
 const SCAN_LIMIT = 900; // days; protects against pathological input
@@ -13,16 +14,16 @@ function wd(ctx) {
   return ctx.weekdays instanceof Set ? ctx.weekdays : new Set(ctx.weekdays);
 }
 
+/** A day she is scheduled to come: a regular weekday or an extra visit day. */
 export function isRegularVisitDay(date, ctx) {
-  return wd(ctx).has(isoWeekday(date));
+  return wd(ctx).has(isoWeekday(date)) || !!ctx.extraDays?.has(date);
 }
 
-/** First regular visit weekday on or after `date`, ignoring out days and closed visits. */
+/** First scheduled visit day on or after `date`, ignoring out days and closed visits. */
 export function rawVisitOnOrAfter(date, ctx) {
-  const set = wd(ctx);
-  if (set.size === 0) return date; // no schedule at all: show things on their own date
+  if (wd(ctx).size === 0 && !ctx.extraDays?.size) return date; // no schedule at all: show things on their own date
   let d = date;
-  for (let i = 0; i < 8; i++, d = addDays(d, 1)) if (set.has(isoWeekday(d))) return d;
+  for (let i = 0; i < 8; i++, d = addDays(d, 1)) if (isRegularVisitDay(d, ctx)) return d;
   return date;
 }
 
@@ -33,7 +34,7 @@ export function isAvailableVisit(date, ctx) {
 
 /** First day on or after `date` on which she is actually coming. */
 export function firstVisitOnOrAfter(date, ctx) {
-  if (wd(ctx).size === 0) return date;
+  if (wd(ctx).size === 0 && !ctx.extraDays?.size) return date;
   let d = rawVisitOnOrAfter(date, ctx);
   for (let i = 0; i < SCAN_LIMIT; i++) {
     if (isAvailableVisit(d, ctx)) return d;
@@ -60,10 +61,9 @@ export function upcomingVisits(date, count, ctx) {
 
 /** How many regular visits lie in [from, to): used for "carried over N visits". */
 export function countVisitsBetween(from, to, ctx) {
-  const set = wd(ctx);
   let n = 0;
   const span = Math.min(diffDays(to, from), 400);
-  for (let i = 0; i < span; i++) if (set.has(isoWeekday(addDays(from, i)))) n++;
+  for (let i = 0; i < span; i++) if (isRegularVisitDay(addDays(from, i), ctx)) n++;
   return n;
 }
 
