@@ -204,3 +204,24 @@ test("requests: priority sorts open requests and anyone can change it", async ()
     assert.equal((await app.patch(`/api/requests/${low.body.id}`, { status: "approved" }, H)).status, 403);
   } finally { await app.close(); }
 });
+
+test("priority can be changed from a row on Home (either view)", async () => {
+  const app = await boot();
+  try {
+    await app.post("/api/tasks", { title: "Mop", repeat: { kind: "daily", start: "2026-10-15" } });
+    await app.post("/api/tasks", { title: "Dust" });
+    let items = (await home(app)).today_items;
+    const mop = items.find((i) => i.title === "Mop");
+    assert.equal((await app.patch(`/api/instances/${mop.id}`, { priority: 5 }, H)).status, 400);
+    const r = await app.patch(`/api/instances/${mop.id}`, { priority: 1, note: "Kitchen first" }, H);
+    assert.equal(r.status, 200);
+    assert.equal(r.body.priority, 1);
+    items = (await home(app)).today_items;
+    assert.deepEqual(items.map((i) => i.title), ["Mop", "Dust"]);
+    assert.equal(items[0].note, "Kitchen first");
+    // later occurrences of the repeating task are high too
+    const sat = (await home(app)).coming_up.find((d) => d.date === "2026-10-17").items.find((i) => i.title === "Mop");
+    assert.equal(sat.priority, 1);
+    assert.ok((await app.get("/api/log")).body.some((l) => l.action === "task.priority"));
+  } finally { await app.close(); }
+});

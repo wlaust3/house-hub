@@ -128,9 +128,9 @@ export function HomeScreen({ role }: { role: Role }) {
     }
     void reload();
   };
-  const saveNote = async (item: Item, note: string) => {
+  const saveEdit = async (item: Item, changes: { note: string; priority: Item["priority"] }) => {
     try {
-      await api(`/instances/${item.id}`, "PATCH", { note });
+      await api(`/instances/${item.id}`, "PATCH", changes);
       await reload();
     } catch (e) {
       setProblem(errorText(e));
@@ -186,7 +186,7 @@ export function HomeScreen({ role }: { role: Role }) {
         tags={<>{showOwner && whenTag(i)}{taskTags(i, showOwner)}</>}
         onToggle={editable ? () => void toggle(i) : undefined}
         readOnly={!editable}
-        onSaveNote={(n) => saveNote(i, n)}
+        onEdit={(c) => saveEdit(i, c)}
       />
     ));
 

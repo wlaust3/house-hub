@@ -28,6 +28,7 @@ const ACTION_KEY: Record<string, Key> = {
   "day.out_changed": "history.day.outChanged",
   "schedule.changed": "history.schedule.changed",
   "task.expired": "history.task.expired",
+  "task.priority": "history.task.priority",
   "lost.added": "history.lost.added",
   "lost.found": "history.lost.found",
   "lost.reopened": "history.lost.reopened",

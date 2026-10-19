@@ -154,12 +154,14 @@ export function CheckRow(p: {
   readOnly?: boolean;
   right?: ReactNode;
   note?: string;
-  onSaveNote?: (note: string) => Promise<void>;
+  /** Pencil button: edit this task's priority and today's note in one go. */
+  onEdit?: (changes: { note: string; priority: Priority }) => Promise<void>;
   priority?: Priority;
   tags?: ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(p.note ?? "");
+  const [prio, setPrio] = useState<Priority>(p.priority ?? 2);
   const [busy, setBusy] = useState(false);
   const still = p.readOnly || !p.onToggle;
 
@@ -189,18 +191,25 @@ export function CheckRow(p: {
             {body}
           </button>
         )}
-        {p.onSaveNote && (
+        {p.onEdit && (
           <button type="button" className={`icon-btn note-btn${p.note ? " has" : ""}`} aria-expanded={editing}
-            aria-label={p.note ? t("note.edit") : t("note.add")} title={p.note ? t("note.edit") : t("note.add")}
-            onClick={() => { setDraft(p.note ?? ""); setEditing(!editing); }}>
+            aria-label={t("row.edit", { title: p.title })} title={t("row.edit", { title: p.title })}
+            onClick={() => { setDraft(p.note ?? ""); setPrio(p.priority ?? 2); setEditing(!editing); }}>
             <Icon name="note" size={22} />
           </button>
         )}
         {p.right}
       </div>
       {p.note && !editing && <p className="note-text"><strong>{t("note.label")}:</strong> {p.note}</p>}
-      {editing && p.onSaveNote && (
+      {editing && p.onEdit && (
         <div className="note-edit">
+          <div className="segmented prio-pick" role="group" aria-label={t("tasks.priorityLabel")}>
+            {([1, 2, 3] as Priority[]).map((n) => (
+              <button key={n} type="button" className={`btn p${n}${prio === n ? " on" : ""}`} aria-pressed={prio === n} onClick={() => setPrio(n)}>
+                <span className={`dot p${n}`} aria-hidden="true" />{t(PRIORITY_KEY[n])}
+              </button>
+            ))}
+          </div>
           <label className="field">
             <span>{t("note.label")}</span>
             <textarea value={draft} maxLength={500} rows={3} onChange={(e) => setDraft(e.target.value)} />
@@ -208,7 +217,7 @@ export function CheckRow(p: {
           <div className="btn-row">
             <button type="button" className="btn primary small" disabled={busy} onClick={async () => {
               setBusy(true);
-              try { await p.onSaveNote!(draft); setEditing(false); } finally { setBusy(false); }
+              try { await p.onEdit!({ note: draft, priority: prio }); setEditing(false); } finally { setBusy(false); }
             }}>{t("action.save")}</button>
             <button type="button" className="btn secondary" onClick={() => setEditing(false)}>{t("action.cancel")}</button>
           </div>

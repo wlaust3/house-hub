@@ -41,8 +41,6 @@
   "task.doneAt": "Done {when}",
   "task.dueOn": "Due {day}",
   "task.seenOn": "seen {day}",
-  "note.add": "Note",
-  "note.edit": "Edit note",
   "note.label": "Note",
   "out.undo": "Undo - I can come",
   "out.youBanner": "You are out {day}",
@@ -295,5 +293,7 @@
   "request.new": "Ask for something",
   "home.groceries": "Groceries",
   "home.youOff": "You're off today",
-  "grocery.addPlaceholder": "Add item"
+  "grocery.addPlaceholder": "Add item",
+  "row.edit": "Edit \"{title}\": priority and note",
+  "history.task.priority": "{who} changed the priority of \"{title}\""
 }
