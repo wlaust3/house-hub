@@ -13,7 +13,7 @@ import { TaskFormScreen } from "./screens/TaskForm";
 import { CalendarScreen } from "./screens/Calendar";
 import { HistoryScreen } from "./screens/History";
 import { SettingsScreen } from "./screens/Settings";
-import type { TestMode } from "./types";
+import type { Me, TestMode } from "./types";
 import { dayLong } from "./format";
 import { PageHeader, Tone } from "./components/ui";
 import { Icon, IconName } from "./components/icons";
@@ -84,6 +84,17 @@ export function App() {
   const [waiting, setWaiting] = useState(0);
   const [hkName, setHkName] = useState<string | null>(null);
   const [testing, setTesting] = useState<TestMode | null>(null);
+  const [meChecked, setMeChecked] = useState(false);
+
+  // On someone's own phone the view starts from their role, so they skip "Who are you?".
+  useEffect(() => {
+    api<Me>("/me").then((me) => {
+      if (me.member && !getRole()) {
+        const r: Role = me.member.role === "housekeeper" ? "housekeeper" : "family";
+        saveRole(r); setRoleState(r);
+      }
+    }).catch(() => undefined).finally(() => setMeChecked(true));
+  }, []);
 
   // "Today" always comes from the house computer so every device agrees on the date.
   useEffect(() => {
@@ -103,6 +114,7 @@ export function App() {
   }, [role, route]);
 
   if (!role) {
+    if (!meChecked) return null;
     return <WhoAreYou current={role} onPick={(r) => { saveRole(r); setRoleState(r); go("/"); }} />;
   }
 

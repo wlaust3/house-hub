@@ -11,17 +11,32 @@ export function householdRouter({ db, today, now }) {
   const r = Router();
 
   // ---------- members ----------
-  const members = () => db.prepare("SELECT id, name, role FROM members WHERE removed_at IS NULL ORDER BY sort, id").all();
+  const members = () => db.prepare("SELECT id, name, role, email FROM members WHERE removed_at IS NULL ORDER BY sort, id").all();
+  // Emails are only shown to the family.
+  const listFor = (req) => (req.role === "family" ? members() : members().map(({ email: _e, ...m }) => m));
 
-  r.get("/members", h((_req, res) => res.json(members())));
+  // The Google account someone signs in with from outside. Only housekeepers and adults sign in.
+  const emailFrom = (body, role, id) => {
+    const email = cleanText(body?.email, { field: "The email", max: 200 }).toLowerCase();
+    if (!email) return null;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, "That email does not look right.");
+    if (!["housekeeper", "adult"].includes(role)) throw new HttpError(400, "Only the housekeeper and adults can sign in.");
+    if (db.prepare("SELECT 1 FROM members WHERE lower(email) = ? AND removed_at IS NULL AND id IS NOT ?").get(email, id ?? null)) {
+      throw new HttpError(409, "Someone else already uses that email.");
+    }
+    return email;
+  };
+
+  r.get("/members", h((req, res) => res.json(listFor(req))));
 
   r.post("/members", h((req, res) => {
     const who = requireFamily(req);
     const name = cleanText(req.body?.name, { required: true, field: "The name", max: 60 });
     const role = req.body?.role;
     if (!MEMBER_ROLES.includes(role)) throw new HttpError(400, "Role must be housekeeper, adult, child or baby.");
+    const email = emailFrom(req.body, role);
     const sort = db.prepare("SELECT COALESCE(MAX(sort), 0) + 1 FROM members").pluck().get();
-    const id = db.prepare("INSERT INTO members (name, role, sort) VALUES (?,?,?)").run(name, role, sort).lastInsertRowid;
+    const id = db.prepare("INSERT INTO members (name, role, email, sort) VALUES (?,?,?,?)").run(name, role, email, sort).lastInsertRowid;
     log(db, who, "member.added", "member", id, { name });
     res.status(201).json(members());
   }));
@@ -37,7 +52,8 @@ export function householdRouter({ db, today, now }) {
     if (role !== m.role && ["child", "baby"].includes(role) && db.prepare("SELECT 1 FROM tasks WHERE owner_id = ? AND deleted_at IS NULL").get(id)) {
       throw new HttpError(409, "This person still has tasks. Give them to someone else first.");
     }
-    db.prepare("UPDATE members SET name = ?, role = ? WHERE id = ?").run(name, role, id);
+    const email = req.body?.email !== undefined ? emailFrom(req.body, role, id) : m.email && emailFrom(m, role, id);
+    db.prepare("UPDATE members SET name = ?, role = ?, email = ? WHERE id = ?").run(name, role, email, id);
     log(db, who, "member.edited", "member", id, { name });
     sync(db, today());
     res.json(members());
@@ -51,7 +67,7 @@ export function householdRouter({ db, today, now }) {
     if (db.prepare("SELECT 1 FROM tasks WHERE owner_id = ? AND deleted_at IS NULL").get(id)) {
       throw new HttpError(409, "This person still has tasks. Give them to someone else first.");
     }
-    db.prepare("UPDATE members SET removed_at = ? WHERE id = ?").run(now().toISOString(), id);
+    db.prepare("UPDATE members SET removed_at = ?, email = NULL WHERE id = ?").run(now().toISOString(), id);
     log(db, who, "member.removed", "member", id, { name: m.name });
     res.json(members());
   }));
