@@ -1,0 +1,19 @@
+# systemd service for House Hub on the Raspberry Pi. See docs/HOSTING.md.
+# Install: sudo cp deploy/house-hub.service /etc/systemd/system/ && sudo systemctl enable --now house-hub
+# Change User and the paths below if your user or folder differ.
+[Unit]
+Description=House Hub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=bill
+WorkingDirectory=/home/bill/house-hub
+# PORT, CF_ACCESS_TEAM, CF_ACCESS_AUD (and optionally HOUSE_HUB_DB) live here; never commit it.
+EnvironmentFile=/home/bill/house-hub/.env
+ExecStart=/usr/bin/node server/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

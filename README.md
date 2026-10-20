@@ -65,7 +65,7 @@ Development: `npm run dev:server` (API with auto-restart) and `npm run dev:web` 
 5. Optional friendly name: on macOS the machine is already reachable as `<computer-name>.local`; on a Raspberry Pi/Linux install Avahi (`sudo apt install avahi-daemon`) and set the hostname to `house-hub` so it answers at `http://house-hub.local:3000`.
 6. Optional: start on boot with a systemd unit (Linux) or launchd (macOS) running `npm run start:server` after one `npm run build`.
 
-**Keep it off the internet.** v1 has **no login**. Anyone who can reach the port can use and change everything. The design assumes a trusted home network: do not port-forward it, do not expose it through a tunnel, and use a router/guest-Wi-Fi setup if you do not trust everyone on your Wi-Fi.
+**The home Wi-Fi port has no login.** Anyone who can reach it can use and change everything, so it is meant for the shared family dashboard on a trusted network: never port-forward it or point a tunnel at it. To use the hub away from home, follow [docs/HOSTING.md](docs/HOSTING.md): a Cloudflare Tunnel reaches a *second* port that only answers people signed in with Google as a household member.
 
 ### Who are you? (roles, no passwords)
 
