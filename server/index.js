@@ -8,8 +8,9 @@ import { requireMember } from "./access.js";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dbFile = process.env.HOUSE_HUB_DB ?? path.join(here, "..", "data", "house-hub.db");
 const port = Number(process.env.PORT ?? 3000);
-// Bind all interfaces so the tablet on the home Wi-Fi can reach it. This port has NO login (it is
-// the family dashboard): never port-forward it to the internet.
+// By default bind all interfaces so the tablet on the home Wi-Fi can reach it; on pi5-server
+// HOST=127.0.0.1 and Caddy serves it as http://house.lan. This port has NO login (it is the family
+// dashboard): never port-forward it or point a tunnel at it.
 const host = process.env.HOST ?? "0.0.0.0";
 
 // Outside access goes through a Cloudflare Tunnel to a second port on this computer only, where

@@ -58,6 +58,8 @@ Development: `npm run dev:server` (API with auto-restart) and `npm run dev:web` 
 
 ### Using it from phones and tablets (LAN)
 
+The house install runs on pi5-server at `http://house.lan`: see [docs/HOSTING.md](docs/HOSTING.md). The steps below are for running it on any other computer.
+
 1. Make sure the server computer and the phones/tablets are on the **same Wi-Fi**.
 2. Find the server's IP address: macOS `ipconfig getifaddr en0`; Linux / Raspberry Pi `hostname -I`; Windows `ipconfig` (IPv4 Address).
 3. On the phone, open `http://<that-ip>:3000` (e.g. `http://192.168.1.50:3000`) and "Add to Home Screen" for an app-like icon.
