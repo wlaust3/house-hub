@@ -21,8 +21,8 @@ export function pretendClock(date, realNow = () => new Date()) {
   };
 }
 
-export function createHub(db, { now = () => new Date(), dbFile = ":memory:" } = {}) {
-  const realApp = createApp(db, { now });
+export function createHub(db, { now = () => new Date(), dbFile = ":memory:", google } = {}) {
+  const realApp = createApp(db, { now, google });
   const sandboxFile = dbFile === ":memory:"
     ? path.join(os.tmpdir(), `house-hub-sandbox-${process.pid}.db`)
     : path.join(path.dirname(dbFile), "house-hub.sandbox.db");
@@ -54,7 +54,7 @@ export function createHub(db, { now = () => new Date(), dbFile = ":memory:" } = 
       const testFromId = sdb.prepare("SELECT COALESCE(MAX(id), 0) FROM activity_log").pluck().get();
       let clock = pretendClock(date, now);
       sandbox = { db: sdb, date, setDate: (d) => { clock = pretendClock(d, now); }, app: null };
-      sandbox.app = createApp(sdb, { now: () => clock(), testFromId });
+      sandbox.app = createApp(sdb, { now: () => clock(), testFromId, google: null }); // never touches Google
     } else {
       sandbox.setDate(date);
       sandbox.date = date;

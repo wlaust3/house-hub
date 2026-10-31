@@ -10,6 +10,7 @@ import { scheduleRouter } from "./routes/schedule.js";
 import { groceryRouter, requestsRouter } from "./routes/lists.js";
 import { viewsRouter } from "./routes/views.js";
 import { householdRouter } from "./routes/household.js";
+import { googleRouter } from "./routes/google.js";
 import { HttpError } from "./services/context.js";
 import { sync } from "./services/sync.js";
 
@@ -19,11 +20,12 @@ const distDir = path.join(here, "..", "dist");
 /**
  * @param db        an open better-sqlite3 database (migrated)
  * @param opts.now  () => Date, injectable clock (tests). "today" is the local calendar date of `now()`.
+ * @param opts.google the Google Calendar service (server/google/index.js); null in test mode
  */
 export function createApp(db, opts = {}) {
   const now = opts.now ?? (() => new Date());
   const today = () => localDate(now());
-  const deps = { db, now, today, testFromId: opts.testFromId ?? null };
+  const deps = { db, now, today, testFromId: opts.testFromId ?? null, google: opts.google };
 
   const app = express();
   app.use(express.json({ limit: "100kb" }));
@@ -36,6 +38,14 @@ export function createApp(db, opts = {}) {
 
   // Who is using this device: a signed-in member (outside access) or the shared family dashboard.
   app.get("/api/me", (req, res) => res.json(req.member ? { device: "personal", member: req.member } : { device: "dashboard", member: null }));
+
+  // Changes in the hub reach Google Calendar within seconds, not just on the minute.
+  if (opts.google) {
+    app.use("/api", (req, res, next) => {
+      if (req.method !== "GET") res.on("finish", () => { if (res.statusCode < 400) opts.google.changed(); });
+      next();
+    });
+  }
 
   // Roll tasks forward and create upcoming recurring occurrences before anything is read.
   app.use("/api", (req, _res, next) => {
@@ -55,6 +65,7 @@ export function createApp(db, opts = {}) {
   app.use("/api", scheduleRouter(deps));
   app.use("/api", viewsRouter(deps));
   app.use("/api", householdRouter(deps));
+  app.use("/api", googleRouter(deps));
 
   // Future (not in v1): POST /api/tasks for device ingestion, protected by an API key.
   // See docs/DATA-MODEL.md "Future: device ingestion".
