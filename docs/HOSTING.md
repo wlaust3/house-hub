@@ -106,6 +106,8 @@ This part is optional. Once it's connected:
 
 One Google account is linked for the whole household. Use the account that owns (or can edit) the family calendars.
 
+**Showing someone else's calendar, such as Falon's:** in Google Calendar, they share it with the linked account (*Settings → their calendar → Share with specific people*). Choose "See all event details" to only show it, or "Make changes to events" to also edit it from the hub. It then appears under **Settings → Google Calendar** in the hub, ready to tick. Anything shown is visible on the kitchen tablet, including in the housekeeper's view.
+
 ### 1. A Google Cloud OAuth client (once)
 
 You can reuse the Google Cloud project made for Cloudflare's Google sign-in, if there is one.
