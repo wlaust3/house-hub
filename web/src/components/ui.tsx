@@ -63,7 +63,7 @@ function useOpen(key: string | undefined, fallback: boolean): [boolean, (v: bool
  * With `collapsible` (a storage key) the heading opens and closes it; `summary` is the
  * one-line stats shown next to the title so a closed section still says something useful.
  */
-export type Tone = "tasks" | "today" | "next" | "family" | "grocery" | "request" | "schedule" | "lost" | "neutral";
+export type Tone = "tasks" | "today" | "next" | "family" | "grocery" | "request" | "schedule" | "lost" | "neutral" | "event";
 
 export function Section({ title, children, hint, action, icon, className, collapsible, summary, defaultOpen = true, tone, badge }: {
   title: string; children: ReactNode; hint?: string; action?: ReactNode; icon?: IconName; className?: string;

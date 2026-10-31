@@ -402,11 +402,11 @@ li:first-child > button.link-row { border-top: 0; }
    orange = today, teal = next visit. Priority stays red / blue / grey. */
 :root {
   --t-tasks: #4f46e5; --t-today: #ea580c; --t-next: #0d9488; --t-family: #db2777;
-  --t-grocery: #16a34a; --t-request: #7c3aed; --t-schedule: #0284c7; --t-lost: #dc2626; --t-neutral: #64748b;
+  --t-grocery: #16a34a; --t-request: #7c3aed; --t-schedule: #0284c7; --t-lost: #dc2626; --t-neutral: #64748b; --t-event: #d97706;
 }
 @media (prefers-color-scheme: dark) {
   :root { --t-tasks: #818cf8; --t-today: #fb923c; --t-next: #2dd4bf; --t-family: #f472b6;
-    --t-grocery: #4ade80; --t-request: #a78bfa; --t-schedule: #38bdf8; --t-lost: #f87171; --t-neutral: #94a3b8; }
+    --t-grocery: #4ade80; --t-request: #a78bfa; --t-schedule: #38bdf8; --t-lost: #f87171; --t-neutral: #94a3b8; --t-event: #fbbf24; }
 }
 [data-tone="tasks"] { --tone: var(--t-tasks); }
 [data-tone="today"] { --tone: var(--t-today); }
@@ -417,6 +417,7 @@ li:first-child > button.link-row { border-top: 0; }
 [data-tone="schedule"] { --tone: var(--t-schedule); }
 [data-tone="lost"] { --tone: var(--t-lost); }
 [data-tone="neutral"] { --tone: var(--t-neutral); }
+[data-tone="event"] { --tone: var(--t-event); }
 .card[data-tone] { border-top: 4px solid var(--tone); }
 .card[data-tone] .card-head h2 > .icon { display: grid; box-sizing: content-box; padding: 6px; border-radius: 10px; color: var(--tone);
   background: color-mix(in srgb, var(--tone) 14%, transparent); }
@@ -485,3 +486,20 @@ li:first-child > button.link-row { border-top: 0; }
 .req-row { box-shadow: inset 4px 0 0 var(--pc, transparent); }
 .req-row .btn.small { flex: none; }
 .note-edit .btn-row > .btn { flex: 1 1 0; min-width: 0; }
+
+/* ---------- family calendar (Google) events ---------- */
+.event-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.event-row + .event-row { border-top: 1px solid var(--line); }
+.event-btn { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 6px 0; background: none; border: 0;
+  color: inherit; font: inherit; text-align: left; cursor: default; }
+button.event-btn { cursor: pointer; }
+button.event-btn > .icon { color: var(--muted); }
+.event-dot { width: 12px; height: 12px; border-radius: 4px; flex: none; }
+.event-day { margin: 8px 0 0; font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.event-edit .field-row.pair { flex-wrap: nowrap; }
+.event-edit .field-row.pair > .field { flex: 1 1 0; }
+.cal-ev { width: 6px; height: 6px; border-radius: 999px; background: var(--t-event); }
+.cal-list { display: flex; flex-direction: column; gap: 8px; }
+.cal-choice { display: flex; align-items: center; gap: 12px; min-height: 44px; font-weight: 500; }
+.cal-choice input { width: 22px; height: 22px; accent-color: var(--accent); }
+.more-link.as-button { background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; }

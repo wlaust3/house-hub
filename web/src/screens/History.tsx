@@ -38,6 +38,11 @@ const ACTION_KEY: Record<string, Key> = {
   "day.noted": "history.day.noted",
   "day.note_removed": "history.day.noteRemoved",
   "member.added": "history.member.added",
+  "calendar.added": "history.calendar.added",
+  "calendar.edited": "history.calendar.edited",
+  "calendar.deleted": "history.calendar.deleted",
+  "google.connected": "history.google.connected",
+  "google.disconnected": "history.google.disconnected",
   "member.edited": "history.member.edited",
   "member.removed": "history.member.removed",
   "grocery.repeating": "history.grocery.repeating",
@@ -49,6 +54,7 @@ function line(r: LogRow): string {
   const who = r.actor === "family" ? t("who.family") : r.actor === "housekeeper" ? t("who.housekeeper") : t("history.system");
   const key = ACTION_KEY[r.action];
   if (!key) return `${who}: ${r.action}`;
+  const via = d.via === "google" ? ` ${t("history.viaGoogle")}` : "";
   return t(key, {
     who,
     title: String(d.title ?? d.name ?? ""),
@@ -56,7 +62,7 @@ function line(r: LogRow): string {
     date: typeof d.date === "string" ? dayLong(d.date) : "",
     count: Number(d.count ?? d.carried ?? 0),
     done: Number(d.done ?? 0),
-  });
+  }) + via;
 }
 
 export function HistoryScreen() {
