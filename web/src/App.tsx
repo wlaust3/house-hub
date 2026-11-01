@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
 import { t, plural, Key } from "./i18n";
-import { getRole, setRole as saveRole, Role } from "./role";
+import { getRole, setRole as saveRole, Role, inTestMode, setTestMode } from "./role";
 import { useHashRoute } from "./hooks";
 import { HomeScreen } from "./screens/Home";
 import { EndOfDayScreen } from "./screens/EndOfDay";
@@ -12,6 +12,9 @@ import { TasksScreen } from "./screens/Tasks";
 import { TaskFormScreen } from "./screens/TaskForm";
 import { CalendarScreen } from "./screens/Calendar";
 import { HistoryScreen } from "./screens/History";
+import { SettingsScreen } from "./screens/Settings";
+import type { TestMode } from "./types";
+import { dayLong } from "./format";
 import { PageHeader } from "./components/ui";
 import { Icon, IconName } from "./components/icons";
 
@@ -47,12 +50,12 @@ type NavItem = { to: string; key: Key; icon: IconName; id: string; familyOnly?: 
 // Sidebar (tablet) shows everything; the phone tab bar shows the first three plus "More".
 const NAV: NavItem[] = [
   { id: "home", to: "/", key: "nav.home", icon: "home" },
-  { id: "groceries", to: "/groceries", key: "nav.groceries", icon: "cart" },
   { id: "requests", to: "/requests", key: "nav.requests", icon: "inbox" },
-  { id: "calendar", to: "/calendar", key: "home.calendar", icon: "calendar" },
   { id: "schedule", to: "/schedule", key: "nav.schedule", icon: "clock" },
+  { id: "calendar", to: "/calendar", key: "home.calendar", icon: "calendar" },
   { id: "tasks", to: "/tasks", key: "nav.tasks", icon: "list", familyOnly: true },
   { id: "history", to: "/history", key: "nav.history", icon: "history", familyOnly: true },
+  { id: "settings", to: "/settings", key: "nav.settings", icon: "sliders", familyOnly: true },
 ];
 
 function More({ role }: { role: Role }) {
@@ -76,31 +79,42 @@ function More({ role }: { role: Role }) {
 
 export function App() {
   const [role, setRoleState] = useState<Role | null>(getRole);
-  const [changing, setChanging] = useState(false);
   const [route, go] = useHashRoute();
   const [today, setToday] = useState("");
   const [waiting, setWaiting] = useState(0);
+  const [hkName, setHkName] = useState<string | null>(null);
+  const [testing, setTesting] = useState<TestMode | null>(null);
 
   // "Today" always comes from the house computer so every device agrees on the date.
   useEffect(() => {
     if (!role) return;
-    const load = () => api<{ today: string; requests_waiting: unknown[] }>("/home").then((h) => { setToday(h.today); setWaiting(h.requests_waiting.length); }).catch(() => undefined);
+    const load = () => {
+      api<{ today: string; requests_waiting: unknown[]; housekeeper_name: string | null }>("/home")
+        .then((h) => { setToday(h.today); setWaiting(h.requests_waiting.length); setHkName(h.housekeeper_name); }).catch(() => undefined);
+      // This device may think it is in test mode after the server dropped the sandbox (e.g. a restart).
+      api<TestMode>("/test-mode").then((m) => {
+        if (inTestMode() && !m.active) setTestMode(false);
+        setTesting(inTestMode() && m.active ? m : null);
+      }).catch(() => undefined);
+    };
     void load();
     const timer = window.setInterval(load, 15000);
     return () => window.clearInterval(timer);
   }, [role, route]);
 
-  if (!role || changing) {
-    return <WhoAreYou current={role} onPick={(r) => { saveRole(r); setRoleState(r); setChanging(false); go("/"); }} />;
+  if (!role) {
+    return <WhoAreYou current={role} onPick={(r) => { saveRole(r); setRoleState(r); go("/"); }} />;
   }
 
   const [path, query = ""] = route.split("?");
   const params = new URLSearchParams(query);
   const active = NAV.slice(1).find((n) => path.startsWith(n.to))?.id ?? (path === "/end-of-day" ? "home" : path === "/more" ? "more" : "home");
-  const tab = ["home", "groceries", "requests"].includes(active) ? active : "more";
+  const tab = ["home", "requests", "schedule"].includes(active) ? active : "more";
   const badge = role === "family" && waiting > 0
     ? <span className="badge" aria-label={plural("home.requestsWaiting", waiting)}>{waiting}</span> : null;
-  const roleName = role === "family" ? t("who.family") : t("who.housekeeper");
+  const roleName = role === "family" ? t("who.family") : hkName ?? t("who.housekeeper");
+  // One tap flips the view; anyone (including the housekeeper) may use the family view.
+  const flipRole = () => { const next: Role = role === "family" ? "housekeeper" : "family"; saveRole(next); setRoleState(next); };
 
   let screen;
   if (path === "/groceries") screen = <GroceryScreen />;
@@ -113,6 +127,7 @@ export function App() {
   else if (role === "family" && path === "/tasks/new") screen = <TaskFormScreen key="new" id={null} presetDate={params.get("date")} today={today || browserToday()} go={go} />;
   else if (role === "family" && /^\/tasks\/\d+$/.test(path)) screen = <TaskFormScreen key={path} id={Number(path.split("/")[2])} presetDate={null} today={today || browserToday()} go={go} />;
   else if (role === "family" && path === "/history") screen = <HistoryScreen />;
+  else if (role === "family" && path === "/settings") screen = <SettingsScreen onTestModeChange={setTesting} />;
   else screen = <HomeScreen role={role} />;
 
   return (
@@ -126,7 +141,7 @@ export function App() {
             </a>
           ))}
         </nav>
-        <button type="button" className="role-btn" onClick={() => setChanging(true)} aria-label={t("who.change")}>
+        <button type="button" className="role-btn" onClick={flipRole} aria-label={t("who.switchTo", { who: role === "family" ? hkName ?? t("who.housekeeper") : t("who.family") })}>
           <span className="avatar"><Icon name={role === "family" ? "users" : "user"} size={20} /></span>
           <span className="nav-text">{roleName}</span>
           <Icon name="swap" size={18} />
@@ -135,12 +150,21 @@ export function App() {
 
       <header className="top">
         <span className="brand"><span className="brand-mark" aria-hidden="true"><Icon name="home" size={20} /></span><span className="brand-name">{t("app.title")}</span></span>
-        <button type="button" className="role-chip" onClick={() => setChanging(true)} aria-label={t("who.change")}>
-          <Icon name={role === "family" ? "users" : "user"} size={18} />{roleName}
+        <button type="button" className="role-chip" onClick={flipRole} aria-label={t("who.switchTo", { who: role === "family" ? hkName ?? t("who.housekeeper") : t("who.family") })}>
+          <Icon name={role === "family" ? "users" : "user"} size={18} />{roleName}<Icon name="swap" size={16} />
         </button>
       </header>
 
-      <main className="content">{screen}</main>
+      <main className="content">
+        {testing && (
+          <div className="test-banner" role="status">
+            <Icon name="flask" size={22} />
+            <span className="grow"><strong>{t("test.banner")}</strong> {t("test.pretending", { date: dayLong(testing.date ?? today) })}</span>
+            {role === "family" && <a className="btn secondary small" href="#/settings">{t("test.change")}</a>}
+          </div>
+        )}
+        {screen}
+      </main>
 
       <nav className="tabs" aria-label={t("nav.label")}>
         {NAV.slice(0, 3).map((n) => (

@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { openDb } from "./db/index.js";
-import { createApp } from "./app.js";
+import { createHub } from "./hub.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dbFile = process.env.HOUSE_HUB_DB ?? path.join(here, "..", "data", "house-hub.db");
@@ -15,7 +15,7 @@ const fake = process.env.HOUSE_HUB_NOW ? Date.parse(process.env.HOUSE_HUB_NOW) -
 const now = () => new Date(Date.now() + fake);
 
 const db = openDb(dbFile);
-createApp(db, { now }).listen(port, host, () => {
+createHub(db, { now, dbFile }).listen(port, host, () => {
   console.log(`House Hub running on http://${host}:${port}  (db: ${dbFile})`);
   console.log("Open it from another device using this computer's LAN IP address.");
 });

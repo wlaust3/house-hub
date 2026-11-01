@@ -16,12 +16,15 @@ export function scheduleRouter({ db, today }) {
     sync(db, t0);
     const ctx = loadContext(db, t0);
     const out = outRows(t0);
+    const notes = new Map(db.prepare("SELECT date, note FROM day_notes WHERE date >= ?").all(t0).map((n) => [n.date, n.note]));
     // The next few regular visit days (including today) with whether each is out, for "I can't come".
     const visits = [];
     let d = addDays(t0, -1);
     for (let i = 0; i < 60 && visits.length < 6; i++) {
       d = addDays(d, 1);
-      if (isRegularVisitDay(d, ctx) && !ctx.closedDays.has(d)) visits.push({ date: d, out: out.find((o) => o.date === d) ?? null });
+      if (isRegularVisitDay(d, ctx) && !ctx.closedDays.has(d)) {
+        visits.push({ date: d, out: out.find((o) => o.date === d) ?? null, extra: ctx.extraDays.has(d), note: notes.get(d) ?? "" });
+      }
     }
     res.json({ weekdays: ctx.weekdays, today: t0, out_days: out, visits });
   }));
@@ -47,14 +50,16 @@ export function scheduleRouter({ db, today }) {
     const who = actor(req);
     const t0 = today();
     sync(db, t0);
-    const { date, reason } = req.body ?? {};
+    const { date } = req.body ?? {};
+    // A reason is optional now: a short note says it better.
+    const reason = req.body?.reason ?? "other";
     const mode = req.body?.mode ?? "shift";
     if (!isValidDate(date)) throw new HttpError(400, "Pick a date.");
     if (mode !== "shift" && who !== "family") throw new HttpError(403, "Only the family can choose to hide a day's tasks.");
     const ctx = loadContext(db, t0);
     const err = validateOutDay({ date, reason, mode }, ctx);
     if (err) throw new HttpError(400, err);
-    const note = who === "family" ? String(req.body?.note ?? "").trim().slice(0, 200) : "";
+    const note = String(req.body?.note ?? "").trim().slice(0, 200);
     let preview;
     db.transaction(() => {
       const instances = db.prepare(`
@@ -71,14 +76,15 @@ export function scheduleRouter({ db, today }) {
     res.status(201).json({ date, reason, mode, shifted: preview.shifted.length, hidden: preview.hidden.length });
   }));
 
-  // Family can switch an existing out day between shift and hide, or add a note.
+  // Anyone can change the note; only the family can switch between shift and hide.
   r.patch("/days-out/:date", h((req, res) => {
-    const who = requireFamily(req);
+    const who = actor(req);
     const t0 = today();
     const row = db.prepare("SELECT * FROM day_overrides WHERE date = ?").get(req.params.date);
     if (!row) throw new HttpError(404, "That day is not marked out.");
     const mode = req.body?.mode ?? row.mode;
     if (!MODES.includes(mode)) throw new HttpError(400, "Mode must be hide or shift.");
+    if (mode !== row.mode && who !== "family") throw new HttpError(403, "Only the family can choose to hide a day's tasks.");
     const note = req.body?.note !== undefined ? String(req.body.note).trim().slice(0, 200) : row.note;
     db.transaction(() => {
       db.prepare("UPDATE day_overrides SET mode = ?, note = ? WHERE date = ?").run(mode, note, row.date);

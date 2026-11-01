@@ -9,6 +9,13 @@ import { openDb } from "../server/db/index.js";
 // Calendar used throughout: Thu 2026-10-15 (today), Sat 17, Mon 19, Thu 22, Sat 24. Visits are Mon/Thu/Sat.
 const H = "housekeeper";
 
+/** Pending/done tasks shown on one day (works for days beyond "Coming up"). */
+async function itemsOn(app, date) {
+  const r = await app.get(`/api/instances?from=${date}&to=${date}`, H);
+  assert.equal(r.status, 200);
+  return r.body;
+}
+
 async function home(app, role = H) {
   const r = await app.get("/api/home", role);
   assert.equal(r.status, 200);
@@ -270,8 +277,7 @@ test("out day (shift): tasks move to the next visit and come back when undone", 
     assert.ok(out.body.shifted >= 1);
     let h = await home(app);
     assert.equal(h.coming_up.find((d) => d.date === "2026-10-17").out.reason, "sick");
-    const mon = h.coming_up.find((d) => d.date === "2026-10-19");
-    assert.ok(mon.items.some((i) => i.title === "Laundry" && i.carried_from === "2026-10-17"));
+    assert.ok((await itemsOn(app, "2026-10-19")).some((i) => i.title === "Laundry" && i.carried_from === "2026-10-17"));
     // undo with one tap
     assert.equal((await app.del("/api/days-out/2026-10-17", H)).status, 200);
     h = await home(app);
@@ -299,8 +305,8 @@ test("out day (hide): recurring occurrences are skipped, one-offs and carried-ov
     const h = await home(app);
     const titlesOn = (d) => h.coming_up.find((x) => x.date === d)?.items.map((i) => i.title) ?? [];
     assert.deepEqual(titlesOn("2026-10-17"), []);
-    assert.deepEqual(titlesOn("2026-10-19").sort(), ["Call the electrician", "Carry me"]);
-    const carried = h.coming_up.find((x) => x.date === "2026-10-19").items.find((i) => i.title === "Carry me");
+    assert.deepEqual((await itemsOn(app, "2026-10-19")).filter((i) => i.status === "pending").map((i) => i.title).sort(), ["Call the electrician", "Carry me"]);
+    const carried = (await itemsOn(app, "2026-10-19")).find((i) => i.title === "Carry me");
     assert.equal(carried.carried_from, "2026-10-12");
     const skipped = app.db.prepare("SELECT status, skip_reason FROM task_instances WHERE task_id=? AND due_date='2026-10-17'").get(rec.body.task_id);
     assert.deepEqual({ ...skipped }, { status: "skipped", skip_reason: "out_day" });
@@ -309,7 +315,7 @@ test("out day (hide): recurring occurrences are skipped, one-offs and carried-ov
     // family flips hide -> shift: the recurring one comes back as carried over
     await app.patch("/api/days-out/2026-10-17", { mode: "shift" }, "family");
     const h2 = await home(app);
-    assert.ok(h2.coming_up.find((x) => x.date === "2026-10-19").items.some((i) => i.title === "Weekly bathrooms" && i.carried_from === "2026-10-17"));
+    assert.ok((await itemsOn(app, "2026-10-19")).some((i) => i.title === "Weekly bathrooms" && i.carried_from === "2026-10-17"));
     // out days show with notes
     assert.equal(h2.coming_up.find((x) => x.date === "2026-10-17").out.note, "Family away");
   } finally { await app.close(); }

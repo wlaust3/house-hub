@@ -1,4 +1,4 @@
-import { getRole } from "./role";
+import { getRole, inTestMode } from "./role";
 
 export class ApiError extends Error {
   status: number;
@@ -13,7 +13,7 @@ export async function api<T = unknown>(path: string, method = "GET", body?: unkn
   const role = getRole();
   const res = await fetch(`/api${path}`, {
     method,
-    headers: { "content-type": "application/json", ...(role ? { "x-role": role } : {}) },
+    headers: { "content-type": "application/json", ...(role ? { "x-role": role } : {}), ...(inTestMode() ? { "x-test-mode": "1" } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   let json: unknown = null;

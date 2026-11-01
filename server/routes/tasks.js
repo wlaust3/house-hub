@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { h, actor, requireFamily } from "./util.js";
-import { HttpError, cleanText, parseId, getInstance, serializeInstance, loadContext, log, instanceQuery } from "../services/context.js";
+import { HttpError, cleanText, parseId, getInstance, serializeInstance, loadContext, contextFor, log, instanceQuery } from "../services/context.js";
+import { PERIODS, IF_NOT_DONE, periodStart } from "../logic/periods.js";
 import { sync } from "../services/sync.js";
 import { placeInstance } from "../logic/visits.js";
 import { isValidDate } from "../logic/dates.js";
@@ -20,6 +21,27 @@ function ruleFromBody(repeat, today, keepStart = null) {
   if (err) throw new HttpError(400, err);
   if (rule.anchor_date < today && rule.anchor_date !== keepStart) throw new HttpError(400, "The start date cannot be in the past.");
   return rule;
+}
+
+/** Priority, owner, period and "if not done" from a request body, falling back to `cur`. */
+function optionsFromBody(db, b, cur = {}) {
+  const priority = b.priority !== undefined ? Number(b.priority) : (cur.priority ?? 2);
+  if (![1, 2, 3].includes(priority)) throw new HttpError(400, "Priority must be high, normal or low.");
+  const period = b.period ?? cur.period ?? "day";
+  if (!PERIODS.includes(period)) throw new HttpError(400, "Pick a day, a week or a month.");
+  const ifNotDone = b.if_not_done ?? cur.if_not_done ?? "carry";
+  if (!IF_NOT_DONE.includes(ifNotDone)) throw new HttpError(400, "If not done must be carry, drop or expire.");
+  const expireDays = ifNotDone === "expire" ? Number(b.expire_days ?? cur.expire_days ?? 7) : null;
+  if (expireDays !== null && !(Number.isInteger(expireDays) && expireDays >= 1 && expireDays <= 365)) throw new HttpError(400, "Pick between 1 and 365 days.");
+  let ownerId = b.owner_id !== undefined ? b.owner_id : (cur.owner_id ?? null);
+  let ownerRole = "housekeeper";
+  if (ownerId != null) {
+    const m = db.prepare("SELECT id, role FROM members WHERE id = ? AND removed_at IS NULL").get(Number(ownerId));
+    if (!m || !["housekeeper", "adult"].includes(m.role)) throw new HttpError(400, "Tasks can belong to the housekeeper or an adult.");
+    ownerId = m.id;
+    ownerRole = m.role;
+  }
+  return { priority, period, if_not_done: ifNotDone, expire_days: expireDays, owner_id: ownerId, owner_role: ownerRole };
 }
 
 export function tasksRouter({ db, today }) {
@@ -42,23 +64,25 @@ export function tasksRouter({ db, today }) {
     requireFamily(req);
     const t0 = today();
     const rows = db.prepare(`
-      SELECT t.id, t.title, t.notes, t.active, t.source, t.recurrence_id, r.kind, r.interval_n, r.interval_unit, r.anchor_date, r.ends_on
-      FROM tasks t LEFT JOIN recurrence_rules r ON r.id = t.recurrence_id
-      WHERE t.deleted_at IS NULL AND t.source != 'device' ORDER BY t.title COLLATE NOCASE`).all();
+      SELECT t.id, t.title, t.notes, t.active, t.source, t.recurrence_id, t.priority, t.period, t.if_not_done, t.expire_days,
+             t.owner_id, t.created_by, m.name AS owner_name, r.kind, r.interval_n, r.interval_unit, r.anchor_date, r.ends_on
+      FROM tasks t LEFT JOIN recurrence_rules r ON r.id = t.recurrence_id LEFT JOIN members m ON m.id = t.owner_id
+      WHERE t.deleted_at IS NULL AND t.source != 'device' ORDER BY t.priority, t.title COLLATE NOCASE`).all();
+    const opts = (t) => ({ priority: t.priority, period: t.period, if_not_done: t.if_not_done, expire_days: t.expire_days, owner_id: t.owner_id, owner_name: t.owner_name, created_by: t.created_by });
     const recurring = [];
     const oneOffs = [];
     for (const t of rows) {
       if (t.recurrence_id) {
         const rule = { kind: t.kind, interval_n: t.interval_n, interval_unit: t.interval_unit, anchor_date: t.anchor_date, ends_on: t.ends_on };
         recurring.push({
-          id: t.id, title: t.title, notes: t.notes, active: !!t.active,
+          id: t.id, title: t.title, notes: t.notes, active: !!t.active, ...opts(t),
           repeat: { kind: t.kind, n: t.interval_n, unit: t.interval_unit, start: t.anchor_date, ends_on: t.ends_on },
           next_due: t.active ? nextDue(rule, addDays(t0, -1)) : null,
         });
       } else {
         const inst = db.prepare("SELECT * FROM task_instances WHERE task_id = ? ORDER BY id DESC LIMIT 1").get(t.id);
         if (inst && inst.status !== "done") {
-          oneOffs.push({ id: t.id, title: t.title, notes: t.notes, due_date: inst.due_date, visit_date: inst.visit_date, rolled_from: inst.rolled_from });
+          oneOffs.push({ id: t.id, title: t.title, notes: t.notes, ...opts(t), due_date: inst.due_date, visit_date: inst.visit_date, rolled_from: inst.rolled_from });
         }
       }
     }
@@ -71,23 +95,25 @@ export function tasksRouter({ db, today }) {
     const title = cleanText(req.body.title, { required: true, field: "The task name" });
     const notes = cleanText(req.body.notes, { max: 500 });
     const repeat = req.body.repeat ?? null;
-    const ctx = loadContext(db, t0);
+    const o = optionsFromBody(db, req.body);
+    const ctx = contextFor(o.owner_role, loadContext(db, t0));
     let out;
     db.transaction(() => {
       if (repeat) {
         const rule = ruleFromBody(repeat, t0);
         const rid = db.prepare("INSERT INTO recurrence_rules (kind, interval_n, interval_unit, anchor_date, ends_on) VALUES (?,?,?,?,?)")
           .run(rule.kind, rule.interval_n, rule.interval_unit, rule.anchor_date, rule.ends_on).lastInsertRowid;
-        const id = db.prepare("INSERT INTO tasks (title, notes, source, recurrence_id, created_by) VALUES (?,?,?,?,?)")
-          .run(title, notes, "recurring", rid, who).lastInsertRowid;
+        const id = db.prepare(`INSERT INTO tasks (title, notes, source, recurrence_id, created_by, priority, owner_id, period, if_not_done, expire_days)
+          VALUES (?,?,?,?,?,?,?,?,?,?)`).run(title, notes, "recurring", rid, who, o.priority, o.owner_id, o.period, o.if_not_done, o.expire_days).lastInsertRowid;
         log(db, who, "task.added", "task", id, { title, repeat: rule.kind });
         out = { task_id: Number(id) };
       } else {
         const date = req.body.date ?? null;
         if (date != null && (!isValidDate(date) || date < t0)) throw new HttpError(400, "Pick today or a day in the future.");
         const due = date ?? t0;
-        const id = db.prepare("INSERT INTO tasks (title, notes, source, created_by) VALUES (?,?,?,?)").run(title, notes, "manual", who).lastInsertRowid;
-        const p = placeInstance({ due_date: due, recurring: false, created_date: t0 }, ctx);
+        const id = db.prepare(`INSERT INTO tasks (title, notes, source, created_by, priority, owner_id, period, if_not_done, expire_days)
+          VALUES (?,?,?,?,?,?,?,?,?)`).run(title, notes, "manual", who, o.priority, o.owner_id, o.period, o.if_not_done, o.expire_days).lastInsertRowid;
+        const p = placeInstance({ due_date: periodStart(due, o.period), recurring: false, created_date: t0 }, ctx);
         const iid = db.prepare("INSERT INTO task_instances (task_id, due_date, visit_date, status, rolled_from) VALUES (?,?,?,?,?)")
           .run(id, due, p.visit_date, p.status, p.rolled_from).lastInsertRowid;
         log(db, who, "task.added", "task", id, { title, visit_date: p.visit_date });
@@ -107,7 +133,15 @@ export function tasksRouter({ db, today }) {
     db.transaction(() => {
       const title = b.title !== undefined ? cleanText(b.title, { required: true, field: "The task name" }) : task.title;
       const notes = b.notes !== undefined ? cleanText(b.notes, { max: 500 }) : task.notes;
-      db.prepare("UPDATE tasks SET title = ?, notes = ? WHERE id = ?").run(title, notes, id);
+      const o = optionsFromBody(db, b, task);
+      db.prepare("UPDATE tasks SET title = ?, notes = ?, priority = ?, owner_id = ?, period = ?, if_not_done = ?, expire_days = ? WHERE id = ?")
+        .run(title, notes, o.priority, o.owner_id, o.period, o.if_not_done, o.expire_days, id);
+      // A new owner or period changes where future occurrences go: regenerate them.
+      const replace = task.recurrence_id && (o.period !== task.period || (o.owner_id ?? null) !== (task.owner_id ?? null));
+      if (replace && !b.repeat) {
+        dropOpenInstances(id, "AND due_date > ?", [t0]);
+        db.prepare("UPDATE tasks SET generated_through = ? WHERE id = ?").run(addDays(t0, -1), id);
+      }
 
       if (task.recurrence_id) {
         if (b.repeat) {

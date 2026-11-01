@@ -1,7 +1,7 @@
 import { ReactNode, useState } from "react";
 import { t } from "../i18n";
 import { stamp, dayLong } from "../format";
-import type { Item } from "../types";
+import type { Item, Priority } from "../types";
 import { plural } from "../i18n";
 import { weekdayName } from "../format";
 import { Icon, IconName } from "./icons";
@@ -48,17 +48,68 @@ export function PageHeader({ title, sub, back, actions }: { title: string; sub?:
   );
 }
 
-/** A card with a heading. Lists inside run edge to edge with dividers. */
-export function Section({ title, children, hint, action, icon, className }: { title: string; children: ReactNode; hint?: string; action?: ReactNode; icon?: IconName; className?: string }) {
+/** Remembers which sections are open on this device. */
+function useOpen(key: string | undefined, fallback: boolean): [boolean, (v: boolean) => void] {
+  const read = () => {
+    if (!key) return fallback;
+    try { const v = localStorage.getItem(`open:${key}`); return v === null ? fallback : v === "1"; } catch { return fallback; }
+  };
+  const [open, setOpen] = useState(read);
+  return [open, (v) => { setOpen(v); try { if (key) localStorage.setItem(`open:${key}`, v ? "1" : "0"); } catch { /* private mode */ } }];
+}
+
+/**
+ * A card with a heading. Lists inside run edge to edge with dividers.
+ * With `collapsible` (a storage key) the heading opens and closes it; `summary` is the
+ * one-line stats shown next to the title so a closed section still says something useful.
+ */
+export function Section({ title, children, hint, action, icon, className, collapsible, summary, defaultOpen = true }: {
+  title: string; children: ReactNode; hint?: string; action?: ReactNode; icon?: IconName; className?: string;
+  collapsible?: string; summary?: ReactNode; defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useOpen(collapsible, defaultOpen);
+  const shown = !collapsible || open;
+  const heading = (
+    <>
+      <h2>{icon && <Icon name={icon} size={22} />}{title}</h2>
+      {summary && <span className="summary">{summary}</span>}
+    </>
+  );
   return (
-    <section className={`card section${className ? ` ${className}` : ""}`}>
+    <section className={`card section${className ? ` ${className}` : ""}${shown ? "" : " closed"}`}>
       <div className="card-head">
-        <h2>{icon && <Icon name={icon} size={22} />}{title}</h2>
-        {action}
+        {collapsible ? (
+          <button type="button" className="head-btn" aria-expanded={open} onClick={() => setOpen(!open)}>
+            {heading}
+            <Icon name={open ? "up" : "down"} size={22} />
+          </button>
+        ) : <div className="head-text">{heading}</div>}
+        {shown && action}
       </div>
-      {hint && <p className="hint">{hint}</p>}
-      {children}
+      {shown && hint && <p className="hint">{hint}</p>}
+      {shown && children}
     </section>
+  );
+}
+
+const PRIORITY_KEY = { 1: "priority.high", 2: "priority.normal", 3: "priority.low" } as const;
+
+/** Small coloured label; normal priority shows nothing extra (the row's bar is enough). */
+export function PriorityTag({ priority }: { priority: Priority }) {
+  if (priority === 2) return null;
+  return <span className={`tag prio p${priority}`}>{t(PRIORITY_KEY[priority])}</span>;
+}
+
+/** Chips for a task row: priority, week/month, owner (when it is not the housekeeper). */
+export function taskTags(item: Item, showOwner: boolean): ReactNode {
+  return (
+    <>
+      <PriorityTag priority={item.priority} />
+      {item.period !== "day" && !item.carried_from && (
+        <span className="tag">{item.period === "week" ? t("period.thisWeek") : t("period.thisMonth")}</span>
+      )}
+      {showOwner && item.owner_role !== "housekeeper" && item.owner_name && <span className="tag owner"><Icon name="user" size={14} />{item.owner_name}</span>}
+    </>
   );
 }
 
@@ -97,6 +148,8 @@ export function CheckRow(p: {
   right?: ReactNode;
   note?: string;
   onSaveNote?: (note: string) => Promise<void>;
+  priority?: Priority;
+  tags?: ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(p.note ?? "");
@@ -108,8 +161,9 @@ export function CheckRow(p: {
       <span className={`box${p.checked ? " on" : ""}${still ? " still" : ""}`} aria-hidden="true">{p.checked && <Icon name="check" size={20} />}</span>
       <span className="grow">
         <span className={`row-title${p.checked ? " struck" : ""}`}>{p.title}</span>
-        {(p.carried || p.sub) && (
+        {(p.carried || p.sub || p.tags) && (
           <span className="row-meta">
+            {p.tags}
             {p.carried && <span className="tag carried">{p.carried}</span>}
             {p.sub && <span className="row-sub">{p.sub}</span>}
           </span>
@@ -119,7 +173,7 @@ export function CheckRow(p: {
   );
 
   return (
-    <li className={`check-item${p.checked ? " done" : ""}`}>
+    <li className={`check-item${p.checked ? " done" : ""}${p.priority ? ` p${p.priority}` : ""}`}>
       <div className="check-line">
         {still ? (
           <div className="check-row static">{body}</div>
