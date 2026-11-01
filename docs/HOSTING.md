@@ -6,7 +6,7 @@ House Hub runs on the home Raspberry Pi (`pi5-server`, `10.44.10.192`). The Pi's
 |---|---|
 | Code | `/opt/apps/house-hub`, a git checkout of a tag from `main` |
 | Data | `/opt/apps/house-hub/data/house-hub.db` |
-| Settings | `/opt/apps/house-hub/.env`, mode 600, copied from `deploy/env.example` |
+| Settings | `/opt/apps/house-hub/.env`, mode 600, copied from `deploy/env.example`. It holds the Cloudflare and Google settings |
 | Service | `house-hub.service` (runs as `wlaust3`), from `deploy/house-hub.service` |
 | Logs | `journalctl -u house-hub -f` |
 
@@ -91,6 +91,53 @@ You need a domain on Cloudflare: buy one through Cloudflare, or point an existin
    - From a phone on mobile data, `https://hub.example.com` should ask for Google sign-in and then open in that person's view.
    - To sign out, visit `https://hub.example.com/cdn-cgi/access/logout`.
 
+## Google Calendar
+
+This part is optional. Once it's connected:
+- **Family calendars on the hub:** the calendars you pick in **Settings → Google Calendar** show on Home ("Family calendar", this week) and on the Calendar screen. In the Family view you can add, change and delete their events from the hub. Changing one day of a repeating event changes only that day.
+- **Visit days in Google:** the hub creates a calendar called "Gladis's visits (House Hub)" and keeps the next 8 weeks of visit days in it as all-day events. You can share it with Falon or Gladis from Google Calendar.
+- **Edits in Google flow back to the hub** within about a minute:
+  - Delete a visit day → she's out that day.
+  - Add an all-day event on another day → extra visit day.
+  - Move an event → the old day is out and the new day is an extra day.
+  - Edit an event's description → that day's note.
+- **Changes made in the hub** reach Google within a few seconds.
+- **Test mode** never touches Google.
+
+One Google account is linked for the whole household. Use the account that owns (or can edit) the family calendars.
+
+**Showing someone else's calendar, such as Falon's:** in Google Calendar, they share it with the linked account (*Settings → their calendar → Share with specific people*). Choose "See all event details" to only show it, or "Make changes to events" to also edit it from the hub. It then appears under **Settings → Google Calendar** in the hub, ready to tick. Anything shown is visible on the kitchen tablet, including in the housekeeper's view.
+
+### 1. A Google Cloud OAuth client (once)
+
+You can reuse the Google Cloud project made for Cloudflare's Google sign-in, if there is one.
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), select the project, go to *APIs & Services → Library*, and enable **Google Calendar API**.
+2. Set up the *OAuth consent screen*:
+   - User type **External**, with your email as the contact.
+   - Add the scope `.../auth/calendar`.
+   - Then **publish the app** (set *Publishing status* to *In production*). While it stays in "Testing", Google ends the hub's access every 7 days. You don't need Google to verify the app: you'll see an "unverified app" warning once, when you connect, and you can continue past it.
+3. Go to *Credentials → Create credentials → OAuth client ID → Web application*. Add these authorized redirect URIs:
+   - `http://localhost:3222/api/google/callback`, for connecting from basement1 (below).
+   - `https://hub.example.com/api/google/callback`, if outside access is set up.
+4. In `/opt/apps/house-hub/.env`, uncomment and fill in `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Then run `sudo systemctl restart house-hub`.
+
+### 2. Connect (once)
+
+Google only sends people back to an `https` address or to `localhost`, so connecting doesn't work from `http://house.lan`. Use one of these:
+
+- **From basement1:** run `ssh -L 3222:127.0.0.1:3222 wlaust3@pi5-server.local`, then open `http://localhost:3222/#/settings`.
+- **Through outside access**, if it's set up: open `https://hub.example.com/#/settings`.
+
+Then:
+1. Switch to the Family view.
+2. Tap **Connect Google Calendar** and sign in with the household Google account.
+3. Tick the calendars to show, and tap **Save**.
+
+Once connected, everything works from `house.lan` as usual. You only need to connect again if access is removed. Settings shows it when that happens.
+
+**Disconnect** in Settings removes the hub's access and its copies of the family events. The visits calendar stays in Google, and you can delete it there.
+
 ## Backups
 
 The whole database is one file. `deploy.sh` backs it up before every deploy. For a nightly copy that's safe while the app is running, add this with `crontab -e` on the Pi:
@@ -99,7 +146,7 @@ The whole database is one file. `deploy.sh` backs it up before every deploy. For
 15 3 * * * cd /opt/apps/house-hub && /usr/bin/node -e 'new (require("better-sqlite3"))("data/house-hub.db",{readonly:true}).backup(process.argv[1])' "data/backup-$(date +\%a).db"
 ```
 
-This keeps one copy per weekday, without installing the `sqlite3` tool. Keep a copy off the Pi too, for example on basement1 with `scp wlaust3@pi5-server.local:/opt/apps/house-hub/data/backup-*.db ~/house-hub-backups/`.
+This keeps one copy per weekday, without installing the `sqlite3` tool. Once Google Calendar is connected, the database holds the hub's Google access, so keep the backups private. Keep a copy off the Pi too, for example on basement1 with `scp wlaust3@pi5-server.local:/opt/apps/house-hub/data/backup-*.db ~/house-hub-backups/`.
 
 **Restore:**
 1. `sudo systemctl stop house-hub`.

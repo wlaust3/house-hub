@@ -6,6 +6,7 @@ import { comingUpDates, weekStart } from "../logic/periods.js";
 import { sync } from "../services/sync.js";
 import { addDays, daysInMonth, isoWeekday } from "../logic/dates.js";
 import { isRegularVisitDay, nextVisitAfter, firstVisitOnOrAfter } from "../logic/visits.js";
+import { eventsBetween } from "./google.js";
 
 const HK = "COALESCE(m.role, 'housekeeper') = 'housekeeper'";
 
@@ -71,6 +72,9 @@ export function viewsRouter({ db, today, testFromId }) {
       lost,
       grocery,
       housekeeper_name: housekeeper,
+      // Family Google Calendar events for this week (empty when Google is not connected).
+      events: eventsBetween(db, t0, addDays(t0, 6)),
+      google_connected: !!db.prepare("SELECT 1 FROM google_link").get(),
     });
   }));
 
@@ -89,6 +93,7 @@ export function viewsRouter({ db, today, testFromId }) {
     const outs = db.prepare("SELECT date, reason, mode, note FROM day_overrides WHERE date BETWEEN ? AND ?").all(first, last);
     const closed = new Set(db.prepare("SELECT date FROM visit_closures WHERE date BETWEEN ? AND ?").pluck().all(first, last));
     const weekdays = new Set(ctx.weekdays);
+    const events = eventsBetween(db, first, last);
     const days = [];
     for (let i = 0; i < lastDay; i++) {
       const date = addDays(first, i);
@@ -102,6 +107,7 @@ export function viewsRouter({ db, today, testFromId }) {
         open_count: own.filter((x) => x.status === "pending").length,
         done_count: own.filter((x) => x.status === "done").length,
         items: own,
+        events: events.filter((e) => e.start_date <= date && e.end_date >= date),
       });
     }
     res.json({ month: `${m[1]}-${m[2]}`, today: t0, days });

@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { openDb } from "./db/index.js";
 import { createHub } from "./hub.js";
 import { requireMember } from "./access.js";
+import { createGoogle } from "./google/index.js";
+import { localDate } from "./logic/dates.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dbFile = process.env.HOUSE_HUB_DB ?? path.join(here, "..", "data", "house-hub.db");
@@ -24,7 +26,12 @@ const fake = process.env.HOUSE_HUB_NOW ? Date.parse(process.env.HOUSE_HUB_NOW) -
 const now = () => new Date(Date.now() + fake);
 
 const db = openDb(dbFile);
-const hub = createHub(db, { now, dbFile });
+// Google Calendar (optional): an OAuth client from Google Cloud. See docs/HOSTING.md.
+const google = process.env.GOOGLE_CLIENT_ID
+  ? createGoogle(db, { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET, today: () => localDate(now()), nudgeMs: 3000 })
+  : undefined;
+const hub = createHub(db, { now, dbFile, google });
+google?.start();
 hub.listen(port, host, () => {
   console.log(`House Hub running on http://${host}:${port}  (db: ${dbFile})`);
   console.log("Open it from another device using this computer's LAN IP address.");

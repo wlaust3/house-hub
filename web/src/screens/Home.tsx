@@ -9,6 +9,7 @@ import { dayHeading, dayLabel, dayLong, weekdayName } from "../format";
 import { CheckRow, ErrorBanner, LinkButton, PageHeader, PrimaryButton, PriorityTag, SecondaryButton, Section, carriedText, taskTags, whenDone } from "../components/ui";
 import { Icon } from "../components/icons";
 import { GroceryPanel } from "./Grocery";
+import { EventsCard } from "../components/events";
 
 /** Red banner for something the family is looking for. "Found it" can take a short note. */
 function LostBanner({ item, onDone }: { item: LostItem; onDone: () => void }) {
@@ -315,6 +316,10 @@ export function HomeScreen({ role }: { role: Role }) {
     </Section>
   );
 
+  const eventsCard = h.google_connected && (
+    <EventsCard events={h.events} today={h.today} isFamily={isFamily} onChange={() => void reload()} />
+  );
+
   const groceryCard = (
     <Section title={t("home.groceries")} icon="cart" tone="grocery" collapsible="groceries"
       summary={g.to_buy ? [plural("grocery.toBuyCount", g.to_buy), g.urgent ? plural("grocery.outCount", g.urgent) : ""].filter(Boolean).join(" · ") : t("grocery.empty")}>
@@ -370,7 +375,8 @@ export function HomeScreen({ role }: { role: Role }) {
         </div>
         <div className="side">
           {familyCard}
-          {comingCard}
+          {/* Her own coming visits matter most to her; the family's calendar to them. */}
+          {isFamily ? <>{eventsCard}{comingCard}</> : <>{comingCard}{eventsCard}</>}
           {dueSoonCard}
         </div>
         <div className="side">

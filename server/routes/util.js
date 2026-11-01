@@ -28,3 +28,8 @@ export const h = (fn) => (req, res, next) => {
     next(e);
   }
 };
+
+/** The same for async handlers. */
+export const ah = (fn) => (req, res, next) => {
+  Promise.resolve().then(() => fn(req, res, next)).catch(next);
+};

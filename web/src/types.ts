@@ -55,6 +55,8 @@ export type Home = {
   lost: LostItem[];
   grocery: { to_buy: number; urgent: number; bought: number };
   housekeeper_name: string | null;
+  events: CalEvent[];
+  google_connected: boolean;
 };
 
 export type Grocery = { id: number; name: string; quantity: string; added_by: string; added_at: string; bought_at: string | null; urgent: boolean };
@@ -73,8 +75,21 @@ export type ScheduleInfo = {
 
 export type CalendarDay = {
   date: string; weekday: number; visit: boolean; out: OutDay | null; closed: boolean;
-  open_count: number; done_count: number; items: Item[];
+  open_count: number; done_count: number; items: Item[]; events: CalEvent[];
 };
+
+/** An event on one of the family's Google calendars. Dates/times are the house's local time; end_date is inclusive. */
+export type CalEvent = {
+  calendar_id: string; event_id: string; title: string; start_date: string; end_date: string;
+  start_time: string | null; end_time: string | null; location: string; notes: string; recurring: boolean;
+  calendar_name: string; color: string | null; writable: boolean;
+};
+export type GoogleCalendarInfo = { calendar_id: string; name: string; color: string | null; writable: boolean };
+export type GoogleStatus = {
+  available: boolean; configured: boolean; connected: boolean; email: string | null;
+  last_sync_at: string | null; last_error: string | null; calendars: GoogleCalendarInfo[];
+};
+export type GoogleCalendarChoice = GoogleCalendarInfo & { selected: boolean; primary: boolean };
 
 export type TaskOptions = {
   priority: Priority; period: Period; if_not_done: IfNotDone; expire_days: number | null;

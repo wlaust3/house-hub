@@ -54,3 +54,9 @@ export function dayHeading(date: string, today: string): string {
   if (diff === 1) return `${t("date.tomorrow")} · ${dayLong(date)}`;
   return dayLong(date);
 }
+
+/** "4:30 PM" (or "16:30") from a local 'HH:MM'. */
+export function timeOfDay(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  return new Intl.DateTimeFormat(getLocale(), { hour: "numeric", minute: "2-digit" }).format(new Date(2024, 0, 1, h, m));
+}
