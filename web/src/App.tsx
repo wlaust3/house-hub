@@ -15,7 +15,7 @@ import { HistoryScreen } from "./screens/History";
 import { SettingsScreen } from "./screens/Settings";
 import type { TestMode } from "./types";
 import { dayLong } from "./format";
-import { PageHeader } from "./components/ui";
+import { PageHeader, Tone } from "./components/ui";
 import { Icon, IconName } from "./components/icons";
 
 function browserToday(): string {
@@ -46,16 +46,16 @@ function WhoAreYou({ onPick, current }: { onPick: (r: Role) => void; current: Ro
   );
 }
 
-type NavItem = { to: string; key: Key; icon: IconName; id: string; familyOnly?: boolean };
+type NavItem = { to: string; key: Key; icon: IconName; id: string; familyOnly?: boolean; tone: Tone };
 // Sidebar (tablet) shows everything; the phone tab bar shows the first three plus "More".
 const NAV: NavItem[] = [
-  { id: "home", to: "/", key: "nav.home", icon: "home" },
-  { id: "requests", to: "/requests", key: "nav.requests", icon: "inbox" },
-  { id: "schedule", to: "/schedule", key: "nav.schedule", icon: "clock" },
-  { id: "calendar", to: "/calendar", key: "home.calendar", icon: "calendar" },
-  { id: "tasks", to: "/tasks", key: "nav.tasks", icon: "list", familyOnly: true },
-  { id: "history", to: "/history", key: "nav.history", icon: "history", familyOnly: true },
-  { id: "settings", to: "/settings", key: "nav.settings", icon: "sliders", familyOnly: true },
+  { id: "home", to: "/", key: "nav.home", icon: "home", tone: "tasks" },
+  { id: "requests", to: "/requests", key: "nav.requests", icon: "inbox", tone: "request" },
+  { id: "schedule", to: "/schedule", key: "nav.schedule", icon: "clock", tone: "schedule" },
+  { id: "calendar", to: "/calendar", key: "home.calendar", icon: "calendar", tone: "schedule" },
+  { id: "tasks", to: "/tasks", key: "nav.tasks", icon: "list", familyOnly: true, tone: "tasks" },
+  { id: "history", to: "/history", key: "nav.history", icon: "history", familyOnly: true, tone: "neutral" },
+  { id: "settings", to: "/settings", key: "nav.settings", icon: "sliders", familyOnly: true, tone: "neutral" },
 ];
 
 function More({ role }: { role: Role }) {
@@ -66,7 +66,7 @@ function More({ role }: { role: Role }) {
         {NAV.slice(3).filter((n) => role === "family" || !n.familyOnly).map((n) => (
           <li key={n.id}>
             <a className="link-row" href={`#${n.to}`}>
-              <span className="link-icon"><Icon name={n.icon} /></span>
+              <span className="link-icon" data-tone={n.tone}><Icon name={n.icon} /></span>
               <span className="grow row-title">{t(n.key)}</span>
               <Icon name="right" size={20} />
             </a>
@@ -136,7 +136,7 @@ export function App() {
         <div className="brand"><span className="brand-mark" aria-hidden="true"><Icon name="home" size={22} /></span><span className="brand-name">{t("app.title")}</span></div>
         <nav className="side-nav" aria-label={t("nav.label")}>
           {NAV.filter((n) => role === "family" || !n.familyOnly).map((n) => (
-            <a key={n.id} href={`#${n.to}`} className={active === n.id ? "on" : ""} aria-current={active === n.id ? "page" : undefined}>
+            <a key={n.id} href={`#${n.to}`} className={active === n.id ? "on" : ""} aria-current={active === n.id ? "page" : undefined} data-tone={n.tone}>
               <Icon name={n.icon} /><span className="nav-text">{t(n.key)}</span>{n.id === "requests" && badge}
             </a>
           ))}
@@ -168,7 +168,7 @@ export function App() {
 
       <nav className="tabs" aria-label={t("nav.label")}>
         {NAV.slice(0, 3).map((n) => (
-          <a key={n.id} href={`#${n.to}`} className={tab === n.id ? "on" : ""} aria-current={tab === n.id ? "page" : undefined}>
+          <a key={n.id} href={`#${n.to}`} className={tab === n.id ? "on" : ""} aria-current={tab === n.id ? "page" : undefined} data-tone={n.tone}>
             <span className="tab-icon"><Icon name={n.icon} />{n.id === "requests" && badge}</span>{t(n.key)}
           </a>
         ))}

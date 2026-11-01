@@ -49,6 +49,7 @@ export type Home = {
   requests_waiting: { id: number; title: string; kind: string; created_at: string }[];
   requests_approved: number;
   family_tasks: Item[];
+  requests_open: { id: number; title: string; details: string; kind: string; status: "submitted" | "approved"; priority: Priority; created_at: string }[];
   lost: LostItem[];
   grocery: { to_buy: number; urgent: number; bought: number };
   housekeeper_name: string | null;
@@ -58,7 +59,7 @@ export type Grocery = { id: number; name: string; quantity: string; added_by: st
 
 export type Request = {
   id: number; title: string; details: string; kind: "buy" | "approve" | "other";
-  status: "submitted" | "approved" | "done"; created_at: string; approved_at: string | null; done_at: string | null; updated_at: string;
+  status: "submitted" | "approved" | "done"; priority: Priority; created_at: string; approved_at: string | null; done_at: string | null; updated_at: string;
 };
 
 export type ScheduleInfo = {

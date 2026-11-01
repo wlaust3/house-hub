@@ -1,6 +1,6 @@
 /* House Hub: tablet-first, phone-friendly.
-   Layout: phone (<768) = top bar + bottom tabs; tablet portrait (768-1099) = icon rail;
-   wide (>=1100) = full sidebar. Two-column screens kick in at 900px.
+   Layout: phone (<768) = top bar + bottom tabs; tablet (768-1279) = icon rail;
+   wide (>=1280) = full sidebar. Two-column screens kick in at 900px; Home uses three from 1024px.
    Rules kept from v1: every tap target >= 56px, >= 8px between neighbours, one primary action per screen. */
 :root {
   --bg: #f3f4f7;
@@ -62,7 +62,7 @@
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
-body { margin: 0; font: 18px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+body { margin: 0; font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   color: var(--fg); background: var(--bg); -webkit-font-smoothing: antialiased; }
 h1, h2, h3 { letter-spacing: -.01em; }
 h1 { font-size: 1.75rem; line-height: 1.2; margin: 0; font-weight: 750; }
@@ -121,7 +121,7 @@ p { margin: 0; }
   .avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); }
 }
 /* wide: full sidebar */
-@media (min-width: 1100px) {
+@media (min-width: 1280px) {
   .shell { grid-template-columns: 248px 1fr; }
   .content { padding: 32px 40px 48px; }
   .sidebar { padding: 24px 16px; }
@@ -395,3 +395,92 @@ li:first-child > button.link-row { border-top: 0; }
 .member-edit { display: flex; flex-direction: column; gap: 12px; padding: 16px 20px; border-top: 1px solid var(--line); background: var(--surface-2); }
 .visit-actions { flex: 0 1 auto; align-items: center; }
 .row-meta .row-sub { display: inline-flex; align-items: center; gap: 4px; }
+
+/* ================= colour system =================
+   Each feature has a tone (section icon, card top edge, nav icon). Timing has its own two:
+   orange = today, teal = next visit. Priority stays red / blue / grey. */
+:root {
+  --t-tasks: #4f46e5; --t-today: #ea580c; --t-next: #0d9488; --t-family: #db2777;
+  --t-grocery: #16a34a; --t-request: #7c3aed; --t-schedule: #0284c7; --t-lost: #dc2626; --t-neutral: #64748b;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --t-tasks: #818cf8; --t-today: #fb923c; --t-next: #2dd4bf; --t-family: #f472b6;
+    --t-grocery: #4ade80; --t-request: #a78bfa; --t-schedule: #38bdf8; --t-lost: #f87171; --t-neutral: #94a3b8; }
+}
+[data-tone="tasks"] { --tone: var(--t-tasks); }
+[data-tone="today"] { --tone: var(--t-today); }
+[data-tone="next"] { --tone: var(--t-next); }
+[data-tone="family"] { --tone: var(--t-family); }
+[data-tone="grocery"] { --tone: var(--t-grocery); }
+[data-tone="request"] { --tone: var(--t-request); }
+[data-tone="schedule"] { --tone: var(--t-schedule); }
+[data-tone="lost"] { --tone: var(--t-lost); }
+[data-tone="neutral"] { --tone: var(--t-neutral); }
+.card[data-tone] { border-top: 4px solid var(--tone); }
+.card[data-tone] .card-head h2 > .icon { display: grid; box-sizing: content-box; padding: 6px; border-radius: 10px; color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 14%, transparent); }
+.card[data-tone="today"], .card[data-tone="next"] { background: color-mix(in srgb, var(--tone) 4%, var(--surface)); }
+.side-nav a[data-tone] .icon, .tabs a[data-tone] .icon { color: var(--tone); }
+.when { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 800;
+  letter-spacing: .05em; text-transform: uppercase; color: #fff; background: var(--tone); white-space: nowrap; }
+.tag.when-tag { background: color-mix(in srgb, var(--tone) 14%, transparent); border-color: color-mix(in srgb, var(--tone) 40%, transparent);
+  color: color-mix(in srgb, var(--tone) 75%, var(--fg)); }
+.day-heading.next { color: var(--t-next); }
+.day-block.next { --tone: var(--t-next); margin: 0 -20px; padding: 8px 20px; background: color-mix(in srgb, var(--tone) 7%, transparent); }
+
+/* ================= density =================
+   Rows are compact everywhere (48px, title and labels on one line when they fit). */
+.check-row { min-height: 50px; padding: 6px 0; gap: 12px; }
+.check-row.static { min-height: 44px; }
+.check-row .grow { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 2px; }
+.row-title { font-weight: 550; }
+.box { flex-basis: 26px; height: 26px; }
+.box .icon { width: 16px; height: 16px; }
+.box.still { margin: 0 7px; }
+.tag { font-size: .74rem; padding: 1px 8px; }
+.icon-btn { flex-basis: 44px; width: 44px; min-height: 44px; }
+.check-item { padding: 0 8px 0 16px; }
+.card { padding: 16px; gap: 10px; }
+.card > .check-list, .card > .day-block > .check-list, .card > .link-list, .card .check-list.flush { margin: 0 -16px; }
+.day-block.next { margin: 0 -16px; padding: 6px 16px; }
+.note-text { margin: -4px 0 8px 38px; padding: 6px 10px; font-size: .85rem; }
+.note-edit { padding: 0 0 12px 38px; }
+.day-heading { font-size: .74rem; }
+.content { gap: 14px; }
+@media (min-width: 768px) { .content { padding: 20px 24px 32px; } }
+.cols.home3 { display: grid; gap: 14px; align-items: start; }
+.cols.home3 > .side { gap: 14px; }
+@media (min-width: 768px) { .cols.home3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .cols.home3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.head-btn { min-height: 44px; }
+.card.closed { padding-top: 10px; padding-bottom: 10px; }
+.btn.small { min-height: 44px; padding: 0 14px; font-size: .95rem; }
+.btn.sticky { min-height: 56px; font-size: 1.05rem; }
+.lost-banner { padding: 10px 14px; }
+.lost-icon { width: 36px; height: 36px; }
+.callout { min-height: 56px; padding: 10px 16px; }
+
+/* compact one-line add (groceries on Home) */
+.quick-add { display: flex; gap: 8px; align-items: stretch; }
+.quick-add input { flex: 1; min-width: 0; min-height: 48px; padding: 8px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--fg); font: inherit; font-size: 1rem; }
+.quick-add input.qty { flex: 0 0 64px; }
+.quick-add .btn, .quick-add .icon-btn { min-height: 48px; }
+.quick-add .icon-btn { border: 1px solid var(--line-strong); }
+.quick-add .btn.primary { padding: 0 14px; }
+.chip { min-height: 40px; padding: 0 12px; font-size: .88rem; }
+.more-link { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; min-height: 40px; color: var(--tone, var(--accent-ink)); font-weight: 650; text-decoration: none; font-size: .92rem; }
+.req-row { display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 4px 8px 4px 16px; border-top: 1px solid var(--line); }
+.req-row:first-child { border-top: 0; }
+.req-row .grow { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 8px; }
+.link-icon[data-tone] { color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, transparent); }
+.card.prio-card { box-shadow: inset 4px 0 0 var(--pc), var(--shadow); }
+.card.prio-card.done { --pc: var(--line); }
+.check-list .icon-btn:not(.danger-on):not(.has) { color: var(--line-strong); }
+.check-list .icon-btn:hover { color: var(--fg); }
+.tag.carried { white-space: nowrap; }
+.card-head h2 { white-space: nowrap; }
+.head-btn .summary { flex: 1; }
+.req-row { box-shadow: inset 4px 0 0 var(--pc, transparent); }
+.req-row .btn.small { flex: none; }
+.note-edit .btn-row > .btn { flex: 1 1 0; min-width: 0; }

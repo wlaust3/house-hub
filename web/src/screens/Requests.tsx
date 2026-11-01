@@ -5,10 +5,12 @@ import { useLoad, errorText } from "../hooks";
 import type { Request } from "../types";
 import type { Role } from "../role";
 import { stamp } from "../format";
-import { ErrorBanner, PageHeader, PrimaryButton, SecondaryButton } from "../components/ui";
+import { ErrorBanner, PageHeader, PrimaryButton, PriorityTag, SecondaryButton } from "../components/ui";
+import type { Priority } from "../types";
 import { Icon } from "../components/icons";
 
 const KIND_KEY = { buy: "request.kind.buy", approve: "request.kind.approve", other: "request.kind.other" } as const;
+const PRIORITIES: [Priority, "priority.high" | "priority.normal" | "priority.low"][] = [[1, "priority.high"], [2, "priority.normal"], [3, "priority.low"]];
 const STATUS_KEY = { submitted: "request.status.submitted", approved: "request.status.approved", done: "request.status.done" } as const;
 
 export function RequestsScreen({ role }: { role: Role }) {
@@ -16,6 +18,7 @@ export function RequestsScreen({ role }: { role: Role }) {
   const [title, setTitle] = useState("");
   const [details, setDetails] = useState("");
   const [kind, setKind] = useState<Request["kind"]>("buy");
+  const [priority, setPriority] = useState<Priority>(2);
   const [problem, setProblem] = useState<string | null>(null);
   const [showFinished, setShowFinished] = useState(false);
 
@@ -27,8 +30,8 @@ export function RequestsScreen({ role }: { role: Role }) {
     e.preventDefault();
     if (!title.trim()) { setProblem(t("request.needTitle")); return; }
     try {
-      await api("/requests", "POST", { title: title.trim(), details: details.trim(), kind });
-      setTitle(""); setDetails(""); setProblem(null);
+      await api("/requests", "POST", { title: title.trim(), details: details.trim(), kind, priority });
+      setTitle(""); setDetails(""); setPriority(2); setProblem(null);
     } catch (err) {
       setProblem(errorText(err));
     }
@@ -46,10 +49,13 @@ export function RequestsScreen({ role }: { role: Role }) {
   };
 
   const card = (r: Request) => (
-    <li key={r.id} className={`card request ${r.status}`}>
+    <li key={r.id} className={`card request ${r.status} prio-card p${r.priority}`}>
       <div className="card-head">
         <p className="card-title">{r.title}</p>
-        <span className={`tag status ${r.status}`}>{t(STATUS_KEY[r.status])}</span>
+        <span className="row-meta">
+          {r.status !== "done" && <PriorityTag priority={r.priority} />}
+          <span className={`tag status ${r.status}`}>{t(STATUS_KEY[r.status])}</span>
+        </span>
       </div>
       <p className="row-sub">{t(KIND_KEY[r.kind])} · {t("request.updated", { when: stamp(r.updated_at) })}</p>
       {r.details && <p>{r.details}</p>}
@@ -96,6 +102,16 @@ export function RequestsScreen({ role }: { role: Role }) {
               {(Object.keys(KIND_KEY) as Request["kind"][]).map((k) => (
                 <button key={k} type="button" className={`btn${kind === k ? " on" : ""}`} aria-pressed={kind === k} onClick={() => setKind(k)}>{t(KIND_KEY[k])}</button>
               ))}
+            </div>
+            <div className="field">
+              <span>{t("tasks.priorityLabel")}</span>
+              <div className="segmented prio-pick" role="group" aria-label={t("tasks.priorityLabel")}>
+                {PRIORITIES.map(([p, key]) => (
+                  <button key={p} type="button" className={`btn p${p}${priority === p ? " on" : ""}`} aria-pressed={priority === p} onClick={() => setPriority(p)}>
+                    <span className={`dot p${p}`} aria-hidden="true" />{t(key)}
+                  </button>
+                ))}
+              </div>
             </div>
             <label className="field">
               <span>{t("request.detailsLabel")}</span>

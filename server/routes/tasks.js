@@ -208,7 +208,13 @@ export function instancesRouter({ db, today, now }) {
     const cur = getInstance(db, id);
     if (!cur) throw new HttpError(404, "That task was not found.");
     const b = req.body ?? {};
+    if (b.priority !== undefined && ![1, 2, 3].includes(Number(b.priority))) throw new HttpError(400, "Priority must be high, normal or low.");
     db.transaction(() => {
+      // Priority belongs to the task, so it changes this and every later occurrence. Anyone can set it from Home.
+      if (b.priority !== undefined && Number(b.priority) !== cur.priority) {
+        db.prepare("UPDATE tasks SET priority = ? WHERE id = ?").run(Number(b.priority), cur.task_id);
+        log(db, who, "task.priority", "task", cur.task_id, { title: cur.title });
+      }
       if (b.note !== undefined) {
         const note = cleanText(b.note, { max: 500, field: "The note" });
         db.prepare("UPDATE task_instances SET note = ? WHERE id = ?").run(note, id);
