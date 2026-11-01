@@ -5,7 +5,8 @@ import { useLoad, errorText } from "../hooks";
 import type { ScheduleInfo, OutDay } from "../types";
 import type { Role } from "../role";
 import { dayHeading, dayLabel, weekdayFromIso } from "../format";
-import { BackButton, ErrorBanner, SecondaryButton, Section } from "../components/ui";
+import { BackButton, ErrorBanner, PageHeader, SecondaryButton, Section } from "../components/ui";
+import { Icon } from "../components/icons";
 
 const REASONS = [
   ["appointment", "out.reason.appointment"],
@@ -66,45 +67,45 @@ export function ScheduleScreen({ role }: { role: Role }) {
 
   return (
     <>
-      <BackButton to="/more" label={t("nav.more")} />
-      <h2>{t("schedule.title")}</h2>
+      <PageHeader back={<BackButton to="/more" label={t("nav.more")} phoneOnly />} title={t("schedule.title")} />
       <ErrorBanner message={problem ?? error} />
 
-      <Section title={t("schedule.regular")} hint={role === "family" ? t("schedule.regularHint") : t("schedule.regularReadOnly")}>
-        <div className="day-grid" role="group" aria-label={t("schedule.regular")}>
-          {[1, 2, 3, 4, 5, 6, 7].map((d) => {
-            const on = s.weekdays.includes(d);
-            return role === "family" ? (
-              <button key={d} type="button" className={`btn toggle${on ? " on" : ""}`} aria-pressed={on} onClick={() => void toggleDay(d)}>
-                <span aria-hidden="true">{on ? "✓ " : ""}</span>{weekdayFromIso(d)}
-              </button>
-            ) : (
-              <div key={d} className={`btn toggle static${on ? " on" : ""}`}>
-                <span aria-hidden="true">{on ? "✓ " : ""}</span>{weekdayFromIso(d)}
-              </div>
-            );
-          })}
-        </div>
-      </Section>
-
-      <Section title={t("schedule.upcoming")}>
-        {s.visits.map((v) => (
-          <div key={v.date} className="day-block">
-            <h3 className="day-heading">{dayHeading(v.date, s.today)}</h3>
-            {v.out ? outRow(v.date, v.out) : asking === v.date ? (
-              <div className="card">
-                <p className="card-title">{t("out.why", { day: dayLabel(v.date, s.today) })}</p>
-                <div className="stack">
-                  {REASONS.map(([r, key]) => <button key={r} type="button" className="btn choice" onClick={() => void markOut(v.date, r)}>{t(key)}</button>)}
-                  <SecondaryButton onClick={() => setAsking(null)}>{t("action.back")}</SecondaryButton>
-                </div>
-              </div>
-            ) : (
-              <SecondaryButton onClick={() => setAsking(v.date)}>{t("home.cantCome", { day: dayLabel(v.date, s.today) })}</SecondaryButton>
-            )}
+      <div className="cols split">
+        <Section title={t("schedule.regular")} icon="clock" className="sticky-col" hint={role === "family" ? t("schedule.regularHint") : t("schedule.regularReadOnly")}>
+          <div className="day-grid" role="group" aria-label={t("schedule.regular")}>
+            {[1, 2, 3, 4, 5, 6, 7].map((d) => {
+              const on = s.weekdays.includes(d);
+              const inner = <>{on ? <Icon name="check" size={18} /> : <span className="icon" style={{ width: 18, height: 18 }} />}{weekdayFromIso(d, "short")}</>;
+              return role === "family" ? (
+                <button key={d} type="button" className={`btn toggle${on ? " on" : ""}`} aria-pressed={on} aria-label={weekdayFromIso(d)} onClick={() => void toggleDay(d)}>{inner}</button>
+              ) : (
+                <div key={d} className={`btn toggle static${on ? " on" : ""}`} aria-label={weekdayFromIso(d)}>{inner}</div>
+              );
+            })}
           </div>
-        ))}
-      </Section>
+        </Section>
+
+        <Section title={t("schedule.upcoming")} icon="calendar">
+          <div>
+            {s.visits.map((v) => (
+              <div key={v.date} className="visit-row">
+                <div className="grow"><span className="row-title">{dayHeading(v.date, s.today)}</span></div>
+                {v.out ? outRow(v.date, v.out) : asking === v.date ? (
+                  <div className="card soft">
+                    <p className="card-title">{t("out.why", { day: dayLabel(v.date, s.today) })}</p>
+                    <div className="stack">
+                      {REASONS.map(([r, key]) => <button key={r} type="button" className="btn choice" onClick={() => void markOut(v.date, r)}>{t(key)}</button>)}
+                      <SecondaryButton onClick={() => setAsking(null)}>{t("action.back")}</SecondaryButton>
+                    </div>
+                  </div>
+                ) : (
+                  <SecondaryButton onClick={() => setAsking(v.date)}>{t("home.cantCome", { day: dayLabel(v.date, s.today) })}</SecondaryButton>
+                )}
+              </div>
+            ))}
+          </div>
+        </Section>
+      </div>
     </>
   );
 }

@@ -3,7 +3,7 @@ import { t, Key } from "../i18n";
 import { useLoad } from "../hooks";
 import type { LogRow } from "../types";
 import { stamp, dayLong } from "../format";
-import { BackButton, ErrorBanner } from "../components/ui";
+import { BackButton, ErrorBanner, PageHeader } from "../components/ui";
 
 const ACTION_KEY: Record<string, Key> = {
   "task.done": "history.task.done",
@@ -46,20 +46,19 @@ function line(r: LogRow): string {
 export function HistoryScreen() {
   const { data, error } = useLoad(() => api<LogRow[]>("/log?limit=150"), [], 15000);
   return (
-    <>
-      <BackButton to="/more" label={t("nav.more")} />
-      <h2>{t("history.title")}</h2>
+    <div className="narrow stack">
+      <PageHeader back={<BackButton to="/more" label={t("nav.more")} phoneOnly />} title={t("history.title")} />
       <ErrorBanner message={error} />
-      {!data ? <p className="hint">{t("common.loading")}</p> : data.length === 0 ? <p className="empty">{t("history.empty")}</p> : (
-        <ul className="plain-list history">
+      {!data ? <p className="hint">{t("common.loading")}</p> : data.length === 0 ? <p className="card soft empty">{t("history.empty")}</p> : (
+        <ul className="card list-card history">
           {data.map((r) => (
-            <li key={r.id} className="card">
-              <span className="card-title">{line(r)}</span>
+            <li key={r.id} className="history-row">
+              <span className="row-title">{line(r)}</span>
               <span className="row-sub">{stamp(r.at)}</span>
             </li>
           ))}
         </ul>
       )}
-    </>
+    </div>
   );
 }

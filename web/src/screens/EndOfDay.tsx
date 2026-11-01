@@ -4,7 +4,7 @@ import { t, plural } from "../i18n";
 import { errorText } from "../hooks";
 import type { Home } from "../types";
 import { dayLabel, dayLong } from "../format";
-import { BackButton, CheckRow, ErrorBanner, PrimaryButton, SecondaryButton, carriedText } from "../components/ui";
+import { BackButton, CheckRow, ErrorBanner, PageHeader, PrimaryButton, SecondaryButton, carriedText } from "../components/ui";
 
 export function EndOfDayScreen({ go }: { go: (to: string) => void }) {
   const [home, setHome] = useState<Home | null>(null);
@@ -50,18 +50,18 @@ export function EndOfDayScreen({ go }: { go: (to: string) => void }) {
   };
 
   return (
-    <>
-      <BackButton to="/" label={t("nav.home")} />
-      <h2>{t("end.title")}</h2>
-      <p className="hint">{t("end.hint", { day: dayLong(home.today) })}</p>
+    <div className="narrow stack">
+      <PageHeader back={<BackButton to="/" label={t("nav.home")} />} title={t("end.title")} sub={t("end.hint", { day: dayLong(home.today) })} />
       <ErrorBanner message={problem} />
-      {items.length === 0 ? <p className="empty">{t("home.nothingToday")}</p> : (
-        <ul className="check-list">
-          {items.map((i) => (
-            <CheckRow key={i.id} checked={checked.has(i.id)} title={i.title} carried={carriedText(i)} onToggle={() => toggle(i.id)} />
-          ))}
-        </ul>
-      )}
+      <section className="card">
+        {items.length === 0 ? <p className="empty">{t("home.nothingToday")}</p> : (
+          <ul className="check-list">
+            {items.map((i) => (
+              <CheckRow key={i.id} checked={checked.has(i.id)} title={i.title} carried={carriedText(i)} onToggle={() => toggle(i.id)} />
+            ))}
+          </ul>
+        )}
+      </section>
       {confirming ? (
         <div className="card warn" role="alert">
           <p className="card-title">{plural("end.carry", left.length, { day: dayLabel(home.next_visit, home.today) })}</p>
@@ -73,6 +73,6 @@ export function EndOfDayScreen({ go }: { go: (to: string) => void }) {
       ) : (
         <PrimaryButton sticky onClick={press} disabled={busy}>{t("end.allDone")}</PrimaryButton>
       )}
-    </>
+    </div>
   );
 }
