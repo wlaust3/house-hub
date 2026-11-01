@@ -261,6 +261,7 @@ li:first-child > .link-row { border-top: 0; }
 .field textarea { min-height: 96px; resize: vertical; }
 .custom-row, .field-row { display: flex; flex-wrap: wrap; gap: var(--gap); align-items: flex-end; }
 .field-row > .field { flex: 1 1 180px; }
+.field > .hint { font-weight: 400; }
 .field-row > .btn { flex: 0 0 auto; }
 
 /* ---------- multi-column screens ---------- */

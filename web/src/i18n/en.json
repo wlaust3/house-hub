@@ -256,6 +256,8 @@
   "member.role.baby": "Baby",
   "member.roleLabel": "Role",
   "member.nameLabel": "Name",
+  "member.emailLabel": "Google account (optional)",
+  "member.emailHint": "Lets them sign in from their own phone, away from home.",
   "member.remove": "Remove",
   "member.addLabel": "Add someone",
   "member.add": "Add person",

@@ -29,7 +29,9 @@ export type Priority = 1 | 2 | 3;
 export type Period = "day" | "week" | "month";
 export type IfNotDone = "carry" | "drop" | "expire";
 export type MemberRole = "housekeeper" | "adult" | "child" | "baby";
-export type Member = { id: number; name: string; role: MemberRole };
+export type Member = { id: number; name: string; role: MemberRole; email?: string | null };
+/** A signed-in member's own phone (outside access), or the shared family dashboard at home. */
+export type Me = { device: "personal" | "dashboard"; member: Member | null };
 export type DayNote = { date: string; note: string; updated_by: string };
 export type LostItem = { id: number; title: string; details: string; created_by: string; created_at: string; found_at?: string | null; found_by?: string | null; found_note?: string };
 export type Staple = { id: number; name: string; quantity: string; every_days: number; next_on: string };

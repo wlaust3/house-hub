@@ -34,6 +34,9 @@ export function createApp(db, opts = {}) {
     res.json({ ok: true, version: 1, visitDays: row.n });
   });
 
+  // Who is using this device: a signed-in member (outside access) or the shared family dashboard.
+  app.get("/api/me", (req, res) => res.json(req.member ? { device: "personal", member: req.member } : { device: "dashboard", member: null }));
+
   // Roll tasks forward and create upcoming recurring occurrences before anything is read.
   app.use("/api", (req, _res, next) => {
     try {

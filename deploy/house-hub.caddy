@@ -1,0 +1,6 @@
+# Caddy site for House Hub on pi5-server: the home Wi-Fi dashboard (no login). See docs/HOSTING.md.
+# Install: sudo cp deploy/house-hub.caddy /etc/caddy/sites/ && sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy
+# Only the dashboard port goes here. The signed-in port (3223) is for the Cloudflare Tunnel alone.
+http://house.lan {
+	reverse_proxy 127.0.0.1:3222
+}

@@ -30,8 +30,10 @@ function MemberRow({ m, onSaved, setProblem }: { m: Member; onSaved: (list: Memb
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(m.name);
   const [role, setRole] = useState<MemberRole>(m.role);
+  const [email, setEmail] = useState(m.email ?? "");
+  const canSignIn = role === "housekeeper" || role === "adult";
   const save = async () => {
-    try { onSaved(await api<Member[]>(`/members/${m.id}`, "PATCH", { name, role })); setEditing(false); setProblem(null); } catch (e) { setProblem(errorText(e)); }
+    try { onSaved(await api<Member[]>(`/members/${m.id}`, "PATCH", { name, role, email: canSignIn ? email : "" })); setEditing(false); setProblem(null); } catch (e) { setProblem(errorText(e)); }
   };
   const remove = async () => {
     try { onSaved(await api<Member[]>(`/members/${m.id}`, "DELETE")); setProblem(null); } catch (e) { setProblem(errorText(e)); }
@@ -39,9 +41,12 @@ function MemberRow({ m, onSaved, setProblem }: { m: Member; onSaved: (list: Memb
   if (!editing) {
     return (
       <li>
-        <button type="button" className="link-row" onClick={() => { setName(m.name); setRole(m.role); setEditing(true); }}>
+        <button type="button" className="link-row" onClick={() => { setName(m.name); setRole(m.role); setEmail(m.email ?? ""); setEditing(true); }}>
           <span className="link-icon"><Icon name={m.role === "housekeeper" ? "user" : "users"} /></span>
-          <span className="grow row-title">{m.name}</span>
+          <span className="grow">
+            <span className="row-title">{m.name}</span>
+            {m.email && <span className="row-sub">{m.email}</span>}
+          </span>
           <span className={`tag role-${m.role}`}>{t(ROLE_KEY[m.role])}</span>
           <Icon name="note" size={20} />
         </button>
@@ -55,6 +60,13 @@ function MemberRow({ m, onSaved, setProblem }: { m: Member; onSaved: (list: Memb
         <input type="text" value={name} maxLength={60} autoComplete="off" onChange={(e) => setName(e.target.value)} />
       </label>
       <RolePicker value={role} onChange={setRole} />
+      {canSignIn && (
+        <label className="field">
+          <span>{t("member.emailLabel")}</span>
+          <input type="email" value={email} maxLength={200} autoComplete="off" inputMode="email" onChange={(e) => setEmail(e.target.value)} />
+          <span className="hint">{t("member.emailHint")}</span>
+        </label>
+      )}
       <div className="btn-row">
         <button type="button" className="btn primary small" onClick={() => void save()}>{t("action.save")}</button>
         <SecondaryButton onClick={() => setEditing(false)}>{t("action.cancel")}</SecondaryButton>
