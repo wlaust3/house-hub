@@ -1,7 +1,7 @@
 # House Hub data model
 
 SQLite, one file (`data/house-hub.db` by default, override with `HOUSE_HUB_DB`). The authoritative schema is
-[`server/db/migrations/001_init.sql`](../server/db/migrations/001_init.sql); new changes go in new numbered
+[`server/db/migrations/`](../server/db/migrations/) (`001_init.sql`, `002_milestone1.sql`); new changes go in new numbered
 migration files, never by editing an applied one. Conventions:
 
 - Dates are `YYYY-MM-DD` strings in the **house's local time zone** (set `TZ` for the server; default is the machine's zone). Do date math on these strings with a date library or plain `Date` in UTC to avoid DST bugs - never mix in time-of-day.
@@ -106,10 +106,10 @@ Smart-home devices or hubs may later push tasks (e.g. "Charge smart shade batter
 
 - `tasks.source = 'device'`, `tasks.external_id` = a stable id from the device (e.g. `shade-livingroom-battery`), `tasks.source_meta` = JSON with device name, battery %, etc. for display.
 - `UNIQUE(source, external_id)` makes pushes idempotent: re-sending an active alert updates the existing task instead of duplicating it.
-- Planned endpoint (documented only, **not implemented in v1**):
+- Planned endpoint (documented only, **not implemented in v1**; it lives under `/api/device/` because `/api/tasks` is the family's task editor):
 
 ```http
-POST /api/tasks
+POST /api/device/tasks
 X-API-Key: <key>
 Content-Type: application/json
 
@@ -124,5 +124,36 @@ Content-Type: application/json
 ```
 
 - Keys will live in a future `api_keys(id, name, key_hash, created_at, revoked_at)` table; only the hash is stored; keys are created from a Family-only settings screen. The device endpoints are the *only* part that would ever need auth, and are still LAN-only.
-- A device may also `DELETE /api/tasks/by-external/:source/:external_id` (or send `"resolved": true`) when the condition clears (battery charged), which marks the open instance `skipped`.
+- A device may also `DELETE /api/device/tasks/by-external/:source/:external_id` (or send `"resolved": true`) when the condition clears (battery charged), which marks the open instance `skipped`.
 - Device-created tasks flow through the same instance / rollover / out-day logic as manual ones; the UI shows a small device badge when `source = 'device'`.
+
+## As built in milestone 1 (what changed from the plan above)
+
+Migration `002_milestone1.sql` adds:
+
+- `tasks.generated_through` - recurring occurrences exist up to this date; `ensureInstances` fills the gap (horizon = today + 60 days, extended up to 400 days when the calendar looks further ahead). New tasks start at `max(anchor, today)`.
+- `tasks.deleted_at` - soft delete. Deleting a task removes its open occurrences, keeps done ones (history) and hides it from every list.
+- `task_instances.skip_reason` (`out_day` | `merged`) - why a `skipped` row is skipped. Both kinds can be revived when the schedule or out days change.
+- `visit_closures(date, closed_at, closed_by)` - a visit finished with "All done". A closed day is no longer an available visit day, so anything left over (or added later that day) lands on the following visit.
+
+### One function decides where a task shows: `placeInstance` (server/logic/visits.js)
+
+1. `base = max(due_date, today)`; `raw` = first regular visit weekday on or after `base` (ignoring out days/closures).
+2. If `raw` is an out day in **hide** mode and the occurrence is a *fresh recurring* one: status `skipped` / `out_day` (not carried over).
+3. Otherwise `visit_date` = first day on or after `raw` that is a regular visit day, not out, not closed. One-offs and already-carried-over items always take this branch, so hide never swallows something the family asked for.
+4. `rolled_from` ("Carried over from Monday"): kept if the task was already carried (its visit passed, or `rolled_from` is in the past); otherwise set to `raw` when the task had been planned for / shown on `raw` but it moved. A brand-new task that merely lands on her next visit is **not** marked.
+
+`planRecompute` (server/logic/rollover.js) runs `placeInstance` over every pending instance (plus revivable skipped ones). It is idempotent, so the server runs it at the start of every API request: missed visits roll forward with no button, closing a visit carries leftovers, editing the schedule re-places future tasks, and undoing an out day moves everything back. Rows are updated in place; `task.rolled` is written to `activity_log` once per move (hidden from the History screen to keep it readable).
+
+### Merge rule (never more than one open occurrence)
+
+After placement, pending occurrences of the **same recurring task on the same visit day** are merged: the earliest `due_date` stays pending (and keeps its carried-over marker); the others become `skipped` / `merged`. If one of them is already `done` for that visit, the rest stay merged. Different tasks and one-offs are never merged. So a daily task missed for ten days shows once, "Carried over from <first missed visit>".
+
+### Decisions made
+
+- **Recurrence is from a fixed anchor**, not from when the task was ticked (as documented above).
+- **"All done" always carries leftovers** to the next visit (no per-task choice); she can untick/tick on the same screen first.
+- **Editing a repeating task** deletes open occurrences *after today* and regenerates from today by the new rule; done history and anything already due stay. Title/note edits change how the task is displayed but the history list keeps snapshots of the title at the time.
+- **Role header** `X-Role`: missing role -> mutations return 400; family-only endpoints return 403 for the housekeeper. It is not security.
+- **Polling**: shared lists re-read every 10 s (grocery, requests, home), no SSE.
+- **Due soon** ("Next few days"): pending items due within `DUE_SOON_DAYS` (3, in `server/services/context.js`) that she will not see today.

@@ -2,14 +2,14 @@
 
 A small web app that runs **on a computer inside your house** (no cloud) so a housekeeper who acts as the general house manager, and the family she works for, can share one simple list: what to do today, groceries, requests, and when she is coming.
 
-> **Status: pre-alpha.** This repo currently contains the scope, data model, handoff docs, and a minimal working scaffold (server, empty database with all tables, placeholder page, CI). The features are specified in [`docs/MILESTONE-1.md`](docs/MILESTONE-1.md) and are not built yet.
+> **Status: milestone 1 built, awaiting real-device testing.** Recurring tasks with roll-forward, the arrival screen and end-of-day check-off, one-off tasks, groceries, requests, schedule with one-tap out days, a calendar, a history list, per-task notes and a due-soon list are implemented and tested. It has been exercised with automated API tests and a headless browser at phone (360px) and tablet widths, but **not yet on a real phone or tablet over Wi-Fi** - see [`docs/MANUAL-TEST.md`](docs/MANUAL-TEST.md). Spec: [`docs/MILESTONE-1.md`](docs/MILESTONE-1.md).
 
 ## Who it is for
 
 - **The housekeeper** (primary user): often on a phone or tablet, wants big buttons, few steps, and plain words. English only in v1, but built so a second language can be added without rework.
 - **The family**: adds one-off tasks, approves her requests, edits the regular schedule.
 
-## What v1 will do
+## What v1 does
 
 Recurring tasks that roll forward when unchecked; an arrival screen (today + coming up) and an end-of-day "All done" check-off; an optional calendar; one-off tasks from family; a grocery list; her requests with statuses submitted / approved / done; a Mon/Thu/Sat schedule where she can mark a day out in two taps; plus (if simple) a check-off log, per-task notes, and a due-soon list. Full details and acceptance criteria: [`docs/MILESTONE-1.md`](docs/MILESTONE-1.md).
 
@@ -52,6 +52,7 @@ Open `http://localhost:3000` on the same machine. Settings (environment variable
 | `HOST` | `0.0.0.0` | Interface to bind (`0.0.0.0` = reachable from the home network) |
 | `HOUSE_HUB_DB` | `./data/house-hub.db` | SQLite file location (created on first run) |
 | `TZ` | system zone | Set to the house's time zone so "today" is correct |
+| `HOUSE_HUB_NOW` | (real clock) | Testing/demo only: pretend the clock started at this local time |
 
 Development: `npm run dev:server` (API with auto-restart) and `npm run dev:web` (Vite dev server with `/api` proxied to port 3000). Tests: `npm test`.
 
@@ -76,7 +77,7 @@ Stop the server and copy the DB file (default `data/house-hub.db`, plus `-wal`/`
 
 ## Data model overview
 
-Full schema in [`server/db/migrations/001_init.sql`](server/db/migrations/001_init.sql); explanation in [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md).
+Full schema in [`server/db/migrations/`](server/db/migrations/) (`001_init.sql`, then `002_milestone1.sql`); explanation in [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md).
 
 | Table | Purpose |
 | --- | --- |
@@ -87,9 +88,10 @@ Full schema in [`server/db/migrations/001_init.sql`](server/db/migrations/001_in
 | `requests` | Her requests to the family: `submitted` -> `approved` -> `done` |
 | `schedule` | Regular visit weekdays (seeded Mon, Thu, Sat) |
 | `day_overrides` | Out days with reason (appointment / sick / other) and hide-or-shift mode |
+| `visit_closures` | Visits finished with "All done" (later tasks go to the following visit) |
 | `activity_log` | Append-only timestamped history of check-offs and changes |
 
-**Future devices:** tasks already carry `source`, `external_id` and `source_meta`, so smart-home gear can later push tasks (e.g. "charge smart shade batteries") through a planned, documented-only `POST /api/tasks` with an API key. No rework of the schema is needed. See [DATA-MODEL.md](docs/DATA-MODEL.md#future-device-ingestion-not-in-v1).
+**Future devices:** tasks already carry `source`, `external_id` and `source_meta`, so smart-home gear can later push tasks (e.g. "charge smart shade batteries") through a planned, documented-only `POST /api/device/tasks` with an API key (`POST /api/tasks` is the family's task editor). No rework of the schema is needed. See [DATA-MODEL.md](docs/DATA-MODEL.md#future-device-ingestion-not-in-v1).
 
 ## UI design principles
 
@@ -108,21 +110,46 @@ Full schema in [`server/db/migrations/001_init.sql`](server/db/migrations/001_in
 house-hub/
   server/
     index.js            # entry: opens DB, starts Express (binds 0.0.0.0)
-    app.js              # Express app factory (routes, static files)
+    app.js              # Express app factory (injectable clock), error handling, static files
     db/
       index.js          # opens SQLite, runs migrations
-      migrations/       # numbered .sql files, applied in order
+      migrations/       # 001_init.sql, 002_milestone1.sql (never edit an applied one)
+    logic/              # PURE functions, no DB/clock: dates, recurrence, visits (placement),
+                        #   rollover (recompute + merge), outdays, requests (transitions)
+    services/           # DB-facing: context (load schedule/out days), sync (ensure + recompute)
+    routes/             # tasks, visits, schedule (+days-out), lists (grocery, requests), views (home, calendar, log)
   web/
     index.html
     vite.config.ts
     src/
-      main.tsx          # placeholder UI
-      styles.css
-      i18n/             # en.json + t() helper
+      main.tsx, App.tsx # hash router, role picker, tab bar
+      api.ts, role.ts, hooks.ts, format.ts, types.ts
+      screens/          # Home, EndOfDay, Grocery, Requests, Schedule, Tasks, TaskForm, Calendar, History
+      components/ui.tsx # PrimaryButton, CheckRow, ...
+      i18n/             # en.json + t()/plural() helpers
   test/                 # node:test tests (npm test)
-  docs/                 # MILESTONE-1.md, DATA-MODEL.md, HANDOFF.md
+  docs/                 # MILESTONE-1.md, DATA-MODEL.md, HANDOFF.md, MANUAL-TEST.md
   .github/workflows/ci.yml  # GitHub Actions CI (install, build, test)
 ```
+
+## API at a glance
+
+JSON under `/api`; send `X-Role: housekeeper|family` (advisory, see "Who are you?"). Errors are `{ "error": "plain-language message" }`.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /home` | Everything the home screen needs: today's items, coming up, due soon, waiting requests |
+| `GET /calendar?month=YYYY-MM` | Month grid data (visit days, out days, tasks per day) |
+| `PATCH /instances/:id` | `{done}` tick/untick, `{note}` per-task note |
+| `POST /visits/:date/close`, `DELETE /visits/:date` | "All done" (batch check-off; unchecked items carry over) and undo |
+| `GET/POST /tasks`, `PATCH/DELETE /tasks/:id` | Family: task definitions (one-off or repeating), edit/pause/delete |
+| `GET/PUT /schedule` | Regular visit days (family edits) and the next visits |
+| `POST /days-out`, `PATCH/DELETE /days-out/:date` | Out day (reason; shift or hide), change mode/note, undo |
+| `GET/POST /grocery`, `PATCH /grocery/:id`, `POST /grocery/clear-bought` | Shopping list |
+| `GET/POST /requests`, `PATCH /requests/:id` | Requests; family moves `submitted -> approved -> done` |
+| `GET /log` | Family: history |
+
+For demos and tests only, `HOUSE_HUB_NOW=2026-10-16T09:00:00` starts the server with a pretend clock.
 
 ## CI
 
